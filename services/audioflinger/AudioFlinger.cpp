@@ -1237,6 +1237,31 @@ status_t AudioFlinger::setParameters(audio_io_handle_t ioHandle, const String8& 
                 gScreenState = ((gScreenState & ~1) + 2) | isOff;
             }
         }
+
+        /* add for switch audio out mode; switch raw data out;
+         * add set param for AUDIO_PARAMETER_DEVICES_OUT_ACTIVE
+         */
+        if (param.get(String8(AUDIO_PARAMETER_STREAM_ROUTING), value) == NO_ERROR
+            || param.get(String8(AUDIO_PARAMETER_RAW_DATA_OUT), value) == NO_ERROR
+            || param.get(String8(AUDIO_PARAMETER_DEVICES_OUT_ACTIVE), value) == NO_ERROR) {
+                if (param.get(String8(AUDIO_PARAMETER_STREAM_ROUTING), value) == NO_ERROR)
+			{
+				char val[8];
+				strcpy(val, keyValuePairs.string() + strlen("routing="));
+				property_set("audio.routing", val);
+			}
+
+                for (uint32_t i = 0; i < mPlaybackThreads.size(); i++) {
+                        mPlaybackThreads.valueAt(i)->setParameters(keyValuePairs);
+                }
+        }
+
+        if (param.get(String8(AUDIO_PARAMETER_DEVICES_IN_ACTIVE), value) == NO_ERROR) {
+                for (uint32_t i = 0; i < mRecordThreads.size(); i++) {
+                        mRecordThreads.valueAt(i)->setParameters(keyValuePairs);
+                }
+        }
+
         return final_result;
     }
 
