@@ -38,6 +38,7 @@
 #include "MetadataRetrieverClient.h"
 #include "StagefrightMetadataRetriever.h"
 #include "MediaPlayerFactory.h"
+#include "CedarXMetadataRetriever.h"
 
 namespace android {
 
@@ -83,6 +84,12 @@ static sp<MediaMetadataRetrieverBase> createRetriever(player_type playerType)
 {
     sp<MediaMetadataRetrieverBase> p;
     switch (playerType) {
+        case CEDARX_PLAYER:
+        case CEDARA_PLAYER:
+        {
+            p = new CedarXMetadataRetriever;
+            break;
+        }
         case STAGEFRIGHT_PLAYER:
         case NU_PLAYER:
         {
@@ -162,12 +169,18 @@ status_t MetadataRetrieverClient::setDataSource(int fd, int64_t offset, int64_t 
         MediaPlayerFactory::getPlayerType(NULL /* client */,
                                           fd,
                                           offset,
-                                          length);
+                                          length,
+                                          false);
     ALOGV("player type = %d", playerType);
     sp<MediaMetadataRetrieverBase> p = createRetriever(playerType);
     if (p == NULL) {
         ::close(fd);
         return NO_INIT;
+    }
+    if(playerType == CEDARX_PLAYER)
+    {
+        ALOGV("cedarx don't accept fd, change to STAGEFRIGHT_PLAYER");
+        playerType = STAGEFRIGHT_PLAYER;
     }
     status_t status = p->setDataSource(fd, offset, length);
     if (status == NO_ERROR) mRetriever = p;
