@@ -1,7 +1,8 @@
 LOCAL_PATH:= $(call my-dir)
 include $(CLEAR_VARS)
 
-include frameworks/av/media/libstagefright/codecs/common/Config.mk
+//include frameworks/av/media/libstagefright/codecs/common/Config.mk
+include frameworks/av/media/CedarX-Projects/Config.mk
 
 ifeq ($(BOARD_HTC_3D_SUPPORT),true)
    LOCAL_CFLAGS += -DHTC_3D_SUPPORT
@@ -153,9 +154,15 @@ LOCAL_STATIC_LIBRARIES := \
         libstagefright_timedtext \
         libvpx \
         libstagefright_mpeg2ts \
-        libstagefright_httplive \
         libstagefright_id3 \
         libFLAC \
+
+ifeq ($(CEDARX_DEBUG_FRAMEWORK),Y)
+  LOCAL_STATIC_LIBRARIES += libstagefright_httplive_opt
+else
+  LOCAL_LDFLAGS += \
+    $(CEDARX_TOP)/../CedarAndroidLib/$(CEDARX_PREBUILD_LIB_PATH)/libstagefright_httplive_opt.a
+endif
 
 LOCAL_SRC_FILES += \
         chromium_http_stub.cpp
