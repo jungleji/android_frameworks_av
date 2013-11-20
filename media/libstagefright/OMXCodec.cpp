@@ -4232,7 +4232,7 @@ status_t OMXCodec::setWMAFormat(const sp<MetaData> &meta)
 }
 #endif
 
-void OMXCodec::setG711Format(int32_t numChannels, sampleRate) {
+void OMXCodec::setG711Format(int32_t numChannels, int32_t sampleRate) {
     CHECK(!mIsEncoder);
     setRawAudioFormat(kPortIndexInput, sampleRate, numChannels);
 }

@@ -1,7 +1,7 @@
 LOCAL_PATH:= $(call my-dir)
 include $(CLEAR_VARS)
 
-//include frameworks/av/media/libstagefright/codecs/common/Config.mk
+##include frameworks/av/media/libstagefright/codecs/common/Config.mk
 include frameworks/av/media/CedarX-Projects/Config.mk
 
 ifeq ($(BOARD_HTC_3D_SUPPORT),true)
