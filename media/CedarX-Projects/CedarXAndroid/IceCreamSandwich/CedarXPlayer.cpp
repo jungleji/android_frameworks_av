@@ -2653,10 +2653,10 @@ int CedarXPlayer::StagefrightVideoRenderInit(int width, int height, int format, 
 	    mDisplayFormat = (int32_t)HWC_FORMAT_YUV420PLANAR;//(int32_t)HAL_PIXEL_FORMAT_YV12;
 	else
     {
-	    mDisplayFormat = HWC_FORMAT_MBYUV420;    //* format should be CEDARV_PIXEL_FORMAT_MB_UV_COMBINED_YUV420
-	    //* other case like 'CEDARV_PIXEL_FORMAT_PLANNER_YUV420', 'CEDARV_PIXEL_FORMAT_RGB888'
-		//* are ignored here. There are currently not used yet. 
-		//* To Be Done.
+	    mDisplayFormat = HWC_FORMAT_MBYUV420;    // format should be CEDARV_PIXEL_FORMAT_MB_UV_COMBINED_YUV420
+	    // other case like 'CEDARV_PIXEL_FORMAT_PLANNER_YUV420', 'CEDARV_PIXEL_FORMAT_RGB888'
+		// are ignored here. There are currently not used yet.
+		// To Be Done.
 	}
     */
     
