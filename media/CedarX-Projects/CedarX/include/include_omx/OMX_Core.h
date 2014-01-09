@@ -437,13 +437,9 @@ typedef enum OMX_EVENTTYPE
 
     OMX_EventMoreBuffer,
     OMX_EventInfo,
-	OMX_EventRawdata,
     OMX_EventRecordDone,
 	OMX_EventMultiPixelExit,
-	OMX_EventRecordGetThumbBuffer,
-	OMX_EventRecordReturnThumbBuffer,
 
-	OMX_EventNetWorkInvalid,
     OMX_EventMax = 0x7FFFFFFF
 } OMX_EVENTTYPE;
 

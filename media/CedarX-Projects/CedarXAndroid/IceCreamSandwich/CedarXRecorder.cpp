@@ -948,9 +948,6 @@ status_t CedarXRecorder::prepare()
 	vInfo.longitudex10000	= mLongitudex10000;
 	vInfo.rotate_degree		= mRotationDegrees;
 #else
-	mSrcVideoWidth          = srcWidth;
-	mSrcVideoHeight			= srcHeight;
-
 	vInfo.video_source 		= convertVideoSource(mVideoSource);
 	vInfo.src_width			= srcWidth;
 	vInfo.src_height		= srcHeight;
@@ -971,9 +968,6 @@ status_t CedarXRecorder::prepare()
 	vInfo.latitudex10000	= mLatitudex10000;
 	vInfo.longitudex10000	= mLongitudex10000;
 	vInfo.rotate_degree		= mRotationDegrees;
-	vInfo.qp_max			= 40;
-	vInfo.qp_min            = 10;
-	vInfo.picEncmode		= 0;
 #endif
 
 	if (mVideoWidth == 0
@@ -1202,8 +1196,6 @@ status_t CedarXRecorder::reset()
     mVideoHeight   = 144;
 	mOutputVideoWidth    = 176;
     mOutputVideoHeight   = 144;
-	mSrcVideoWidth = 176;
-	mSrcVideoHeight = 144;
     mFrameRate     = 20;
     mVideoBitRate  = 192000;
     mSampleRate    = 8000;
@@ -1309,7 +1301,6 @@ void CedarXRecorder::dataCallbackTimestamp(int64_t timestampUs,
 		buf.timeStamp = mLastTimeLapseFrameTimestampUs + mTimeBetweenTimeLapseVideoFramesUs;
 		mLastTimeLapseFrameTimestampUs = buf.timeStamp;
 	}
-	buf.addrPhyC = buf.addrPhyY + mSrcVideoWidth*mSrcVideoHeight;
 	
 	// LOGV("CedarXRecorder::dataCallbackTimestamp: addrPhyY %x, timestamp %lld us", buf.addrPhyY, timestampUs);
 

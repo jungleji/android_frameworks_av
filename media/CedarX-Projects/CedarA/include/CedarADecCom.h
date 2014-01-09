@@ -22,9 +22,6 @@ extern "C"
 {
 #endif
 #include <ad_cedarlib_com.h>
-
-#define BsBuffLEN 8*1024
-
 typedef struct  __AUDIO_CODEC_FORMAT
 {
      //define audio codec type

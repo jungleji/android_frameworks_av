@@ -41,8 +41,6 @@ public:
 
     void render(
             const void *data, size_t size, void *platformPrivate);
-    int dequeueFrame(ANativeWindowBufferCedarXWrapper *pObject);
-    int enqueueFrame(ANativeWindowBufferCedarXWrapper *pObject);
 
 private:
     enum YUVMode {

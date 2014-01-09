@@ -101,13 +101,7 @@ typedef enum CDX_DEMUX_COMMANDS
     CDX_DMX_CMD_SET_DEFAULT_HIGH_WATER_THRESHOLD,
 	
 	CDX_DMX_CMD_SET_TRACK_INFO,
-	//only usefull for ts.
-	CDX_DMX_CMD_SET_AV_SYNC,
-	CDX_DMX_CMD_CLEAR_BUFFER,
-	CDX_DMX_CMD_STOP_SYNC_READING,
 
-	//state of net
-	CDX_DMX_CMD_GET_NETWORK_STATUS,
     CDX_DMX_CMD_SKIP_CHUNK_DATA = 0x100,
 } CDX_DEMUX_COMMANDS;
 
@@ -144,7 +138,7 @@ enum CEDARXAUDIOFLAGSENUM{
 
 typedef struct  CedarXAudioStreamInfo
 {
-    int       codec_type;     //CDX_AUDIO_MP3, enum __CEDARLIB_AUDIO_CODEC_TYPE,AUDIO_MP3??   <==>__cedar_audio_fmt_t
+    int       codec_type;     //enum __CEDARLIB_AUDIO_CODEC_TYPE,AUDIO_MP3??   <==>__cedar_audio_fmt_t
     int       sub_codec_type;
     int       channels;
     int       bits_per_sample;

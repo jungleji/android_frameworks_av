@@ -10,18 +10,18 @@ typedef struct {__s32 x; __s32 y;                           }__disp_pos_t;
 
 typedef enum
 {
-	LCD_CMAP_B0	= 0x0,
-	LCD_CMAP_G0	= 0x1,
-	LCD_CMAP_R0	= 0x2,
-	LCD_CMAP_B1	= 0x4,
-	LCD_CMAP_G1	= 0x5,
-	LCD_CMAP_R1	= 0x6,
-	LCD_CMAP_B2	= 0x8,
-	LCD_CMAP_G2	= 0x9,
-	LCD_CMAP_R2	= 0xa,
-	LCD_CMAP_B3	= 0xc,
-	LCD_CMAP_G3	= 0xd,
-	LCD_CMAP_R3	= 0xe,
+        LCD_CMAP_B0	= 0x0,
+        LCD_CMAP_G0	= 0x1,
+        LCD_CMAP_R0	= 0x2,
+        LCD_CMAP_B1	= 0x4,
+        LCD_CMAP_G1	= 0x5,
+        LCD_CMAP_R1	= 0x6,
+        LCD_CMAP_B2	= 0x8,
+        LCD_CMAP_G2	= 0x9,
+        LCD_CMAP_R2	= 0xa,
+        LCD_CMAP_B3	= 0xc,
+        LCD_CMAP_G3	= 0xd,
+        LCD_CMAP_R3	= 0xe,
 }__lcd_cmap_color;
 
 
@@ -32,7 +32,7 @@ typedef enum
         DISP_FORMAT_2BPP        = 0x1,
         DISP_FORMAT_4BPP        = 0x2,
         DISP_FORMAT_8BPP        = 0x3,
-        DISP_FORMAT_RGB655      = 0x4,
+        DISP_FORMAT_RGB655      = 0x4,   
         DISP_FORMAT_RGB565      = 0x5,
         DISP_FORMAT_RGB556      = 0x6,
         DISP_FORMAT_ARGB1555    = 0x7,
@@ -225,10 +225,11 @@ typedef enum
 {
         DISP_LCDC_SRC_DE_CH1    = 0,
         DISP_LCDC_SRC_DE_CH2    = 1,
-        DISP_LCDC_SRC_DMA       = 2,
-        DISP_LCDC_SRC_WHITE     = 3,
-        DISP_LCDC_SRC_BLACK     = 4,
-        DISP_LCDC_SRC_BLUE      = 5,
+        DISP_LCDC_SRC_DMA888    = 2,
+        DISP_LCDC_SRC_DMA565    = 3,    
+        DISP_LCDC_SRC_WHITE     = 4,
+        DISP_LCDC_SRC_BLACK     = 5,
+        DISP_LCDC_SRC_BLUE      = 6,
 }__disp_lcdc_src_t;
 
 typedef enum
@@ -285,26 +286,18 @@ typedef enum
 
 typedef enum
 {
-        DISP_ENHANCE_MODE_RED       = 0x0,
-        DISP_ENHANCE_MODE_GREEN     = 0x1,
-        DISP_ENHANCE_MODE_BLUE      = 0x2,
-        DISP_ENHANCE_MODE_CYAN      = 0x3,
-        DISP_ENHANCE_MODE_MAGENTA   = 0x4,
-        DISP_ENHANCE_MODE_YELLOW    = 0x5,
-        DISP_ENHANCE_MODE_FLESH     = 0x6,
-        DISP_ENHANCE_MODE_STANDARD  = 0x7,
-        DISP_ENHANCE_MODE_VIVID     = 0x8,
-        DISP_ENHANCE_MODE_SCENERY   = 0xa,
+	DISP_ENHANCE_MODE_RED       = 0x0,
+	DISP_ENHANCE_MODE_GREEN     = 0x1,
+	DISP_ENHANCE_MODE_BLUE      = 0x2,
+	DISP_ENHANCE_MODE_CYAN      = 0x3,
+	DISP_ENHANCE_MODE_MAGENTA   = 0x4,
+	DISP_ENHANCE_MODE_YELLOW    = 0x5,
+	DISP_ENHANCE_MODE_FLESH     = 0x6,
+	DISP_ENHANCE_MODE_STANDARD  = 0x7,
+	DISP_ENHANCE_MODE_VIVID     = 0x8,
+	DISP_ENHANCE_MODE_SCENERY   = 0xa,
 }__disp_enhance_mode_t;
 
-typedef enum
-{
-        DISP_OUT_CSC_TYPE_LCD        = 0,
-        DISP_OUT_CSC_TYPE_TV         = 1,
-        DISP_OUT_CSC_TYPE_HDMI_YUV   = 2,
-        DISP_OUT_CSC_TYPE_VGA        = 3,
-        DISP_OUT_CSC_TYPE_HDMI_RGB   = 4,
-}__disp_out_csc_type_t;
 
 typedef enum//only for debug!!!
 {
@@ -319,7 +312,13 @@ typedef enum//only for debug!!!
 	DISP_REG_CCMU 		= 8,
 	DISP_REG_PIOC 		= 9,
 	DISP_REG_PWM 		= 10,
-	DISP_REG_HDMI           = 11,
+	DISP_REG_DEU0 		= 11,
+	DISP_REG_DEU1 		= 12,
+	DISP_REG_CMU0 		= 13,
+	DISP_REG_CMU1 		= 14,
+	DISP_REG_DRC0 		= 15,
+	DISP_REG_DRC1 		= 16,
+	DISP_REG_DSI 		= 17,
 }__disp_reg_index_t;
 
 
@@ -329,7 +328,7 @@ typedef enum
 	LCD_IF_HV	= 0,
 	LCD_IF_CPU	= 1,
 	LCD_IF_LVDS	= 3,
-	LCD_IF_HV2DSI	= 4,
+	LCD_IF_DSI	= 4,
 	LCD_IF_EDP  	= 5,
 }__lcd_if_t;
 
@@ -447,7 +446,7 @@ typedef struct
 	__bool                  b_trd_src; //if 3d source, used for scaler mode layer
 	__disp_3d_src_mode_t    trd_mode; //source 3d mode, used for scaler mode layer
 	__u32                   trd_right_addr[3];//used when in frame packing 3d mode
-        __bool                  pre_multiply; //TRUE: pre-multiply fb
+	__bool                  pre_multiply; //TRUE: pre-multiply fb
 }__disp_fb_t;
 
 typedef struct
@@ -524,15 +523,12 @@ typedef struct
 
 typedef struct
 {
-	__s32 (*hdmi_open)(void);
-	__s32 (*hdmi_close)(void);
+	__s32 (*Hdmi_open)(void);
+	__s32 (*Hdmi_close)(void);
 	__s32 (*hdmi_set_mode)(__disp_tv_mode_t mode);
 	__s32 (*hdmi_mode_support)(__disp_tv_mode_t mode);
 	__s32 (*hdmi_get_HPD_status)(void);
 	__s32 (*hdmi_set_pll)(__u32 pll, __u32 clk);
-        __s32 (*hdmi_dvi_enable)(__u32 mode);
-        __s32 (*hdmi_dvi_support)(void);
-        __s32 (*hdmi_get_input_csc)(void);
 	__s32 (*hdmi_suspend)(void);
 	__s32 (*hdmi_resume)(void);
 }__disp_hdmi_func;
@@ -547,7 +543,7 @@ typedef struct
 	__u32  	lcd_pwm_freq;
 	__u32  	lcd_pwm_pol;
 	__u32   lcd_srgb;
-	__u32   lcd_rb_swap;
+	__u32  	lcd_rb_swap;
 	__u32   lcd_if; //0:hv(sync+de); 1:8080; 2:ttl; 3:lvds
 	
 	__u32   lcd_uf;
@@ -555,13 +551,13 @@ typedef struct
 	__u32   lcd_ht;
 	__u32   lcd_vbp;
 	__u32   lcd_hbp;
+	__u32   lcd_vspw;
+	__u32   lcd_hspw;
         
 	__u32   lcd_hv_if;
 	__u32   lcd_hv_smode;
 	__u32   lcd_hv_s888_if;
 	__u32   lcd_hv_syuv_if;
-	__u32   lcd_vspw;
-	__u32   lcd_hspw;
 	__u32   lcd_hv_lde_used;
 	__u32   lcd_hv_lde_iovalue;
 	
@@ -607,6 +603,8 @@ typedef struct
 	
 	__u32   start_delay;//not need to config for user
 	__u32   tcon_index; //not need to config for user
+	__u32	lcd_fresh_mode;//not need to config for user
+	__u32   lcd_dclk_freq_original; //not need to config for user
 }__panel_para_t;
 
 
@@ -674,7 +672,7 @@ typedef enum
 	FB_MODE_SCREEN0 		= 0,
 	FB_MODE_SCREEN1 		= 1,
 	FB_MODE_DUAL_SAME_SCREEN_TB	= 2,//two screen, top buffer for screen0, bottom buffer for screen1
-        FB_MODE_DUAL_DIFF_SCREEN_SAME_CONTENTS = 3,//two screen, they have same contents;
+	FB_MODE_SCREEN0_PARTLY 		= 3,
 }__fb_mode_t;
 
 typedef struct
@@ -705,7 +703,7 @@ typedef enum
 	DISP_INIT_MODE_SCREEN1 		= 1,//fb0 for screen1
 	DISP_INIT_MODE_TWO_DIFF_SCREEN 	= 2,//fb0 for screen0 and fb1 for screen1
 	DISP_INIT_MODE_TWO_SAME_SCREEN 	= 3,//fb0(up buffer for screen0, down buffer for screen1)
-        DISP_INIT_MODE_SCREEN0_PARTLY = 4,//fb0(fb size fix to 1920*1080,but the source window is variable according to the output)
+	DISP_INIT_MODE_SCREEN0_GPU 	= 4,//fb0(fb size fix to 1920*1080,but the source window is variable according to the output)
 }__disp_init_mode_t;
 
 

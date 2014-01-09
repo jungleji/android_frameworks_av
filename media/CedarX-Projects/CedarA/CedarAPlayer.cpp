@@ -59,7 +59,7 @@ extern "C" int CedarAPlayerCallbackWrapper(void *cookie, int event, void *info);
 
 CedarAPlayer::CedarAPlayer() :
 	mQueueStarted(false),mAudioPlayer(NULL), mFlags(0), mExtractorFlags(0),
-	mSuspensionPositionUs(0),mAwesomePlayer(NULL){
+	mSuspensionPositionUs(0){
 
 	LOGV("Construction");
 	reset_l();
@@ -84,12 +84,6 @@ CedarAPlayer::~CedarAPlayer() {
 		mAudioPlayer = NULL;
 	}
 
-	if (mAwesomePlayer) {
-		LOGV("delete mAwesomePlayer");
-		delete mAwesomePlayer;
-		mAwesomePlayer = NULL;
-
-	}
 	LOGV("Deconstruction %x",mFlags);
 }
 
@@ -111,19 +105,7 @@ status_t CedarAPlayer::setDataSource(const char *uri, const KeyedVector<
 		String8, String8> *headers) {
 	//Mutex::Autolock autoLock(mLock);
 	LOGV("CedarAPlayer::setDataSource (%s)", uri);
-	int err = OK;
-	err = mPlayer->control(mPlayer, CDA_SET_DATASOURCE_URL, (unsigned int)uri, 0);
-	if (err == CDA_NETWORK_PLAY)
-	{
-		mAwesomePlayer = new AwesomePlayer;
-		mAwesomePlayer->setListener(mListener);
-		if (mAudioSink != NULL) {
-			mAwesomePlayer->setAudioSink(mAudioSink);
-		}
-		
-		err = mAwesomePlayer->setDataSource(uri, headers);
-	}
-	return err;
+	return mPlayer->control(mPlayer, CDA_SET_DATASOURCE_URL, (unsigned int)uri, 0);
 }
 
 status_t CedarAPlayer::setDataSource(int fd, int64_t offset, int64_t length) {
@@ -155,10 +137,6 @@ void CedarAPlayer::reset() {
 	//Mutex::Autolock autoLock(mLock);
 	LOGV("RESET ???????????????, context: %p",this);
 
-	ALOGV("reset");
-	if (mAwesomePlayer) {
-		mAwesomePlayer->reset();
-	}	
 	if(mPlayer != NULL){
 		//mPlayer->control(mPlayer, CDA_CMD_RESET, 0, 0);
 	}
@@ -193,9 +171,6 @@ void CedarAPlayer::notifyListener_l(int msg, int ext1, int ext2) {
 status_t CedarAPlayer::play() {
 	LOGV("CedarAPlayer::play()");
 	status_t ret = OK;
-	if (mAwesomePlayer) {
-		return mAwesomePlayer->play();
-	}	
 
 	//Mutex::Autolock autoLock(mLock);
 
@@ -226,16 +201,12 @@ status_t CedarAPlayer::play_l(int command) {
 	}
 
 	mFlags &= ~PAUSING;
-	mFlags &= ~AT_EOS;
 
 	return OK;
 }
 
 status_t CedarAPlayer::stop() {
 	LOGV("CedarAPlayer::stop");
-	if (mAwesomePlayer) {
-		return mAwesomePlayer->pause();
-	}	
 
 	//mPlayer->control(mPlayer, CDA_CMD_STOP, 0, 0);
 	stop_l();
@@ -258,10 +229,6 @@ status_t CedarAPlayer::stop_l() {
 }
 
 status_t CedarAPlayer::pause() {
-    ALOGV("pause");
-	if (mAwesomePlayer) {
-		return mAwesomePlayer->pause();
-	}	
 	//Mutex::Autolock autoLock(mLock);
 	mFlags &= ~CACHE_UNDERRUN;
 	//mPlayer->control(mPlayer, CDA_CMD_PAUSE, 0, 0);
@@ -293,9 +260,6 @@ status_t CedarAPlayer::pause_l(bool at_eos) {
 }
 
 bool CedarAPlayer::isPlaying() const {
-	if (mAwesomePlayer) {
-		return mAwesomePlayer->isPlaying();
-	}	
 	return (mFlags & PLAYING) || (mFlags & CACHE_UNDERRUN);
 }
 
@@ -328,10 +292,6 @@ void CedarAPlayer::setAudioSink(const sp<MediaPlayerBase::AudioSink> &audioSink)
 
 status_t CedarAPlayer::setLooping(bool shouldLoop) {
 	//Mutex::Autolock autoLock(mLock);
-    ALOGV("setLooping");
-	if (mAwesomePlayer) {
-		return mAwesomePlayer->setLooping(shouldLoop);
-	}	
 
 	mFlags = mFlags & ~LOOPING;
 
@@ -343,22 +303,6 @@ status_t CedarAPlayer::setLooping(bool shouldLoop) {
 }
 
 status_t CedarAPlayer::getDuration(int64_t *durationUs) {
-	ALOGV("getDuration");
-
-    int64_t duration;
-	if (mAwesomePlayer) {
-		status_t err = mAwesomePlayer->getDuration(&duration);
-		
-		if (err != OK) {
-			*durationUs = 0;
-			return OK;
-		}
-		
-		*durationUs = duration;
-		
-		return OK;
-
-	}	
 
 	mPlayer->control(mPlayer, CDA_CMD_GET_DURATION, (unsigned int)durationUs, 0);
 	*durationUs *= 1000;
@@ -368,24 +312,12 @@ status_t CedarAPlayer::getDuration(int64_t *durationUs) {
 }
 
 status_t CedarAPlayer::getPosition(int64_t *positionUs) {
-    int64_t position;
-	if (mAwesomePlayer) {
-		status_t err = mAwesomePlayer->getPosition(&position);
-
-	    if (err != OK) {
-	        return err;
-	    }
-
-	    *positionUs = position;
-
-	    return OK;		 		 
-	}
 
 	if(mFlags & AT_EOS){
 		*positionUs = mDurationUs;
 		return OK;
 	}
-	
+
 	mPlayer->control(mPlayer, CDA_CMD_GET_POSITION, (unsigned int)positionUs, 0);
 
 	if(*positionUs == -1){
@@ -396,16 +328,12 @@ status_t CedarAPlayer::getPosition(int64_t *positionUs) {
 }
 
 status_t CedarAPlayer::seekTo(int64_t timeUs) {
-    ALOGV("seekTo");
-	if (mAwesomePlayer) {
-		return mAwesomePlayer->seekTo((int64_t)timeUs * 1000);
-	}
 
 	int64_t currPositionUs;
 	mSeekNotificationSent = false;
 	LOGV("seek cmd0 to %lldms", timeUs);
 
-	if (mSeeking) {
+	if (mSeeking || (mFlags & AT_EOS)) {
 		LOGV( "seeking while paused or is seeking, sending SEEK_COMPLETE notification"
 					" immediately.");
 
@@ -480,9 +408,6 @@ status_t CedarAPlayer::prepare_l() {
 
 status_t CedarAPlayer::prepareAsync() {
 	LOGV("prepare Async");
-	if (mAwesomePlayer) {
-		return mAwesomePlayer->prepareAsync();
-	}	
 	//Mutex::Autolock autoLock(mLock);
 	if (mFlags & PREPARING) {
 		return UNKNOWN_ERROR; // async prepare already pending
@@ -501,9 +426,6 @@ status_t CedarAPlayer::prepareAsync() {
 status_t CedarAPlayer::prepare() {
 	//Mutex::Autolock autoLock(mLock);
 	LOGV("prepare");
-	if (mAwesomePlayer) {
-		return mAwesomePlayer->prepare();
-	}	
 	mIsAsyncPrepare = false;
 
 	if(mPlayer->control(mPlayer, CDA_CMD_PREPARE, 0, 0) != 0){

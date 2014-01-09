@@ -27,10 +27,4 @@ int cdx_write_stream_file(const void *ptr, size_t size, size_t nmemb, struct cdx
 long long cdx_get_stream_size_file(struct cdx_stream_info *stream);
 int create_outstream_handle_file(struct cdx_stream_info *stm_info, CedarXDataSourceDesc *datasource_desc);
 
-//add by weihongqiang, handle files with file descriptor.
-int cdx_seek_fd_file(struct cdx_stream_info *stream, cdx_off_t offset, int whence);
-cdx_off_t cdx_tell_fd_file(struct cdx_stream_info *stream);
-int cdx_read_fd_file(void *ptr, size_t size, size_t nmemb, struct cdx_stream_info *stream);
-int cdx_write_fd_file(const void *ptr, size_t size, size_t nmemb, struct cdx_stream_info *stream);
-long long cdx_get_fd_size_file(struct cdx_stream_info *stream);
 #endif

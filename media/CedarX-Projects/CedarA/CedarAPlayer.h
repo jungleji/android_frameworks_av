@@ -28,7 +28,6 @@
 #include <media/stagefright/MediaBuffer.h>
 
 #include "CedarADecoder.h"
-#include <AwesomePlayer.h>
 
 #if (CEDARX_ANDROID_VERSION > 6)
 #define LOGV ALOGV
@@ -38,7 +37,6 @@
 namespace android {
 
 struct CedarAAudioPlayer;
-struct AwesomePlayer;
 struct DataSource;
 struct MediaBuffer;
 struct MediaExtractor;
@@ -155,7 +153,6 @@ private:
     KeyedVector<String8, String8> mUriHeaders;
 
     CedarAAudioPlayer *mAudioPlayer;
-	AwesomePlayer *mAwesomePlayer;
     int64_t mDurationUs;
 
     uint32_t mFlags;

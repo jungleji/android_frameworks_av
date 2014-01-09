@@ -65,7 +65,6 @@ typedef struct CedarXPlayerContext{
 	CedarXMediaInformations cdx_mediainfo;
 	VideoThumbnailInfo vd_thumb_info;
 	OMX_S32 file_fmt_type;
-	OMX_S32 subtitle_type;
 	OMX_S32 is_hardware_init;
 	OMX_S32 fatal_error;
 	OMX_S32	disable_xxxx_track;
@@ -85,7 +84,7 @@ typedef struct CedarXPlayerContext{
 	pthread_mutex_t cdx_player_mutex;
 	pthread_mutex_t cdx_event_mutex;
 	pthread_t thread_id;
-	message_queue_t  msg_queue;
+	message_quene_t  msg_queue;
 	cdx_sem_t cdx_sem_wait_message;
 	pthread_mutex_t msg_sync_mutex;
 	int msg_id_processed;
@@ -119,7 +118,7 @@ typedef struct CedarXPlayerContext{
 	OMX_S32 	cedarv_rotation;    // static rotate, 0: no rotate, 1: 90 degree (clock wise), 2: 180, 3: 270, 4: horizon flip, 5: vertical flip;
 	OMX_S32 	cedarv_max_width;
 	OMX_S32 	cedarv_max_height;
-	OMX_S32 	cedarv_output_setting;  //CEDARX_OUTPUT_SETTING_MODE_PLANNER
+	OMX_S32 	cedarv_output_setting;
 
 	OMX_S32     soft_chip_version;
 	OMX_S32		max_resolution;
@@ -130,13 +129,10 @@ typedef struct CedarXPlayerContext{
 	OMX_S8		container_type;
 	OMX_S8      av_sync;
     OMX_U8     play_bd_file;
-    OMX_S32		stream_source_type;
+
     OMX_S32    dynamic_rotation;    //the value definition is same as cedarv_rotation .
-    OMX_S32    render_pattern;      //0:gui render; 1:hw render.
-    CDXVideoDecodeRenderFramework   vdecRenderFramework;   
 
     CDX_S32     vpsspeed;   //vps play, -40~100, default:0
-    CDX_S32		network_err_flag;
 }CedarXPlayerContext;
 
 #include "CDX_PlayerAPI.h"

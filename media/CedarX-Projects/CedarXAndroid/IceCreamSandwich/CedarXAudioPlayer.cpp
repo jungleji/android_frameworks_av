@@ -135,10 +135,7 @@ status_t CedarXAudioPlayer::start(bool sourceAlreadyStarted)
 
 void CedarXAudioPlayer::pause(bool playPendingSamples)
 {
-        if(!mStarted) {
-                return ;
-        }
-    //CHECK(mStarted);
+    CHECK(mStarted);
 
     if (playPendingSamples) {
         if (mAudioSink.get() != NULL) {
@@ -157,10 +154,7 @@ void CedarXAudioPlayer::pause(bool playPendingSamples)
 
 void CedarXAudioPlayer::resume()
 {
-        if(!mStarted) {
-                return ;
-        }
-   // CHECK(mStarted);
+    CHECK(mStarted);
 
     if (mAudioSink.get() != NULL) {
         mAudioSink->start();
@@ -171,10 +165,7 @@ void CedarXAudioPlayer::resume()
 
 void CedarXAudioPlayer::reset()
 {
-        if(!mStarted) {
-                return ;
-        }
-    //CHECK(mStarted);
+    CHECK(mStarted);
 
     mReachedEOS = true;
 
@@ -261,7 +252,7 @@ size_t CedarXAudioPlayer::fillBuffer(void *data, size_t size)
     	if (mReachedEOS)
     	     return 0;
 
-        usleep(5*1000);
+        usleep(20*1000);
     }
     LOGV("----tobe fillBuffer size:%d",mAudioBufferSize);
     return size;

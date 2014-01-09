@@ -27,7 +27,6 @@ typedef long long CDA_S64;
 #define CDA_FALSE 0
 
 enum CDA_ERROR_TYPE{
-	CDA_NETWORK_PLAY = -3,
 	CDA_ERROR_NOMEM = -2,
 	CDA_ERROR = -1,
 	CDA_OK = 0

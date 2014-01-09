@@ -38,7 +38,6 @@ typedef struct CedarXMetaData {
 	int  nHasVideo;
 	int  nHasAudio;
 	int  nHasSubtitle;
-    int  nRotationAngle;
 }CedarXMetaData;
 
 #endif

@@ -176,7 +176,6 @@ private:
     int32_t mCameraId;
     int32_t mVideoWidth, mVideoHeight;
 	int32_t mOutputVideoWidth, mOutputVideoHeight;
-	int32_t mSrcVideoWidth, mSrcVideoHeight;
     int32_t mFrameRate;
     int32_t mVideoBitRate;
 	int64_t mMaxFileDurationUs;

@@ -386,34 +386,31 @@ void CedarXMetadataRetriever::parseMetaData()
 			mMetaData.add(METADATA_KEY_DURATION, String8(str));
 		}
 
-        if(cdx_metadata.nHasAudio> 0)                      
+    	if(cdx_metadata.width > 0)
+		{
+			sprintf(str, "%d", cdx_metadata.width);
+			LOGV("METADATA_KEY_VIDEO_WIDTH:%d", cdx_metadata.duration);
+			mMetaData.add(METADATA_KEY_VIDEO_WIDTH, String8(str));
+		}
+
+    	if(cdx_metadata.height > 0)
+		{
+			sprintf(str, "%d", cdx_metadata.height);
+			LOGV("METADATA_KEY_VIDEO_HEIGHT:%d", cdx_metadata.duration);
+			mMetaData.add(METADATA_KEY_VIDEO_HEIGHT, String8(str));
+		}
+		if(cdx_metadata.nHasVideo> 0)
+		{
+			sprintf(str, "%d", cdx_metadata.nHasVideo);
+			LOGV("METADATA_KEY_HAS_VIDEO:%d", cdx_metadata.nHasVideo);
+			mMetaData.add(METADATA_KEY_HAS_VIDEO, String8(str));
+		}
+        if(cdx_metadata.nHasAudio> 0)                       //fuqiang
 		{
 			sprintf(str, "%d", cdx_metadata.nHasAudio);
 			LOGV("METADATA_KEY_HAS_AUDIO:%d", cdx_metadata.nHasAudio);
 			mMetaData.add(METADATA_KEY_HAS_AUDIO, String8(str));
 		} 
-
-        if(cdx_metadata.nHasVideo> 0)
-		{
-			sprintf(str, "%d", cdx_metadata.nHasVideo);
-			LOGV("METADATA_KEY_HAS_VIDEO:%d", cdx_metadata.nHasVideo);
-			mMetaData.add(METADATA_KEY_HAS_VIDEO, String8(str));
-
-            sprintf(str, "%d", cdx_metadata.width);
-			LOGV("METADATA_KEY_VIDEO_WIDTH:%d", cdx_metadata.width);
-			mMetaData.add(METADATA_KEY_VIDEO_WIDTH, String8(str));
-
-            sprintf(str, "%d", cdx_metadata.height);
-			LOGV("METADATA_KEY_VIDEO_HEIGHT:%d", cdx_metadata.height);
-			mMetaData.add(METADATA_KEY_VIDEO_HEIGHT, String8(str));
-
-            #if (CEDARX_ANDROID_VERSION > 7)
-            sprintf(str, "%d", cdx_metadata.nRotationAngle);
-			LOGV("METADATA_KEY_VIDEO_ROTATION:%d", cdx_metadata.nRotationAngle);
-			mMetaData.add(METADATA_KEY_VIDEO_ROTATION, String8(str));  
-            #endif
-		}
-
     }
     
 //    { kKeyMIMEType, METADATA_KEY_MIMETYPE },//ulAudio_name_sz

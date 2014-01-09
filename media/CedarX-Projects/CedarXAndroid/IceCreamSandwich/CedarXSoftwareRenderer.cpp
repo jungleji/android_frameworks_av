@@ -79,13 +79,13 @@ CedarXSoftwareRenderer::CedarXSoftwareRenderer(
     CHECK_EQ(0,
             native_window_set_usage(
             mNativeWindow.get(),
-            GRALLOC_USAGE_SW_READ_NEVER /*| GRALLOC_USAGE_SW_WRITE_OFTEN*/
+            GRALLOC_USAGE_SW_READ_NEVER | GRALLOC_USAGE_SW_WRITE_OFTEN
             | GRALLOC_USAGE_HW_TEXTURE | GRALLOC_USAGE_EXTERNAL_DISP));
 
-    CHECK_EQ(0,
-            native_window_set_scaling_mode(
-            mNativeWindow.get(),
-            NATIVE_WINDOW_SCALING_MODE_SCALE_TO_WINDOW));
+//    CHECK_EQ(0,
+//            native_window_set_scaling_mode(
+//            mNativeWindow.get(),
+//            NATIVE_WINDOW_SCALING_MODE_SCALE_TO_WINDOW));
 
     // Width must be multiple of 32??? 
     nGpuBufWidth = mWidth;
@@ -118,6 +118,8 @@ CedarXSoftwareRenderer::CedarXSoftwareRenderer(
 #else
     #error "Unknown chip type!"
 #endif
+
+    
     CHECK_EQ(0, native_window_set_buffers_geometry(
                 mNativeWindow.get(),
                 //(bufWidth + 15) & ~15,
@@ -237,8 +239,6 @@ void CedarXSoftwareRenderer::render(const void *pObject, size_t size, void *plat
     dst += dst_c_size;
     data += src_c_size;
     memcpy(dst, data, src_display_c_size);
-    //LOGD("dst_y_size[%d],dst_c_size[%d];src_y_size[%d],src_c_size[%d];src_display_y_size[%d],src_display_c_size[%d]", 
-    //    dst_y_size, dst_c_size, src_y_size, src_c_size, src_display_y_size, src_display_c_size);
 #elif defined(__CHIP_VERSION_F33)
     libhwclayerpara_t   OverlayParam;
     convertlibhwclayerpara_SoftwareRendererVirtual2Arch(&OverlayParam, pVirtuallibhwclayerpara);
@@ -264,8 +264,7 @@ void CedarXSoftwareRenderer::render(const void *pObject, size_t size, void *plat
     	unsigned char* dstPtr;
     	unsigned char* srcPtr;
     	dstPtr = (unsigned char*)dst;
-//    	srcPtr = (unsigned char*)cedarv_address_phy2vir((void*)pOverlayParam->addr[0]);
-    	srcPtr = (unsigned char*)cedarv_address_phy2vir((void*)pVirtuallibhwclayerpara->top_y);
+    	srcPtr = (unsigned char*)cedarv_address_phy2vir((void*)pOverlayParam->addr[0]);
     	vdecBuf_widthAlign = (mWidth + 15) & ~15;
     	vdecBuf_heightAlign = (mHeight + 15) & ~15;
         //1. yv12_y copy
@@ -287,8 +286,7 @@ void CedarXSoftwareRenderer::render(const void *pObject, size_t size, void *plat
             }
         }
         //2. yv12_v copy
-    	//vdecBuf_cWidthAlign = (mWidth/2 + 15) & ~15;
-    	vdecBuf_cWidthAlign = ((mWidth + 15) & ~15)/2;
+    	vdecBuf_cWidthAlign = (mWidth/2 + 15) & ~15;
     	vdecBuf_cHeightAlign = ((mHeight + 15) & ~15)/2;
     	for(i=0; i<(mHeight+1)/2; i++)
     	{
@@ -364,83 +362,6 @@ void CedarXSoftwareRenderer::render(const void *pObject, size_t size, void *plat
     buf = NULL;
 #endif
 
-}
-
-int CedarXSoftwareRenderer::dequeueFrame(ANativeWindowBufferCedarXWrapper *pObject)
-{
-    ANativeWindowBuffer *buf;
-	//libhwclayerpara_t*  pOverlayParam = NULL;
-    //Virtuallibhwclayerpara *pVirtuallibhwclayerpara = (Virtuallibhwclayerpara*)pObject;
-    ANativeWindowBufferCedarXWrapper *pANativeWindowBuffer = (ANativeWindowBufferCedarXWrapper*)pObject;
-    int err;
-
-#if ((CEDARX_ANDROID_VERSION == 8) || (CEDARX_ANDROID_VERSION == 9))
-    if ((err = mNativeWindow->dequeueBuffer_DEPRECATED(mNativeWindow.get(), &buf)) != 0) {
-        LOGW("Surface::dequeueBuffer returned error %d", err);
-        return -1;
-    }
-    CHECK_EQ(0, mNativeWindow->lockBuffer_DEPRECATED(mNativeWindow.get(), buf));
-#else
-    if ((err = mNativeWindow->dequeueBuffer(mNativeWindow.get(), &buf)) != 0)
-    {
-        LOGW("Surface::dequeueBuffer returned error %d", err);
-        return -1;
-    }
-    CHECK_EQ(0, mNativeWindow->lockBuffer(mNativeWindow.get(), buf));
-#endif
-
-    GraphicBufferMapper &mapper = GraphicBufferMapper::get();
-
-
-    //a10_GPUbuffer_YV12, Y:16*2 align, UV:16*1 align.
-    //a10_vdecbuffer_YV12, Y:16*16 align, UV:16*8 align.
-    //a31_GPUbuffer_YV12, Y:32*2 align, UV:16*1 align.
-    //a31_vdecbuffer_YV12, Y:16*16 align, UV:16*8 or 8*8 align
-
-    //we make the rule: the buffersize request from GPU is Y:16*16 align!
-    //But in A31, gpu buffer is 32align in width at least, 
-    //so the requested a31_gpu_buffer is Y_32*16align, uv_16*8 actually.
-    
-    //Rect bounds((mWidth+15)&~15, (mHeight+15)&~15);  
-    //Rect bounds((mWidth+15)&~15, (mHeight+7)&~7);
-    //Rect bounds((mWidth+15)&~15, mHeight);
-    Rect bounds(mWidth, mHeight);
-
-    void *dst;
-    CHECK_EQ(0, mapper.lock(buf->handle, GRALLOC_USAGE_SW_WRITE_OFTEN, bounds, &dst));
-
-//    LOGD("buf->stride:%d, buf->width:%d, buf->height:%d buf->format:%d, buf->usage:%d,WXH:%dx%d dst:%p", 
-//        buf->stride, buf->width, buf->height, buf->format, buf->usage, mWidth, mHeight, dst);
-    pANativeWindowBuffer->width     = buf->width;
-    pANativeWindowBuffer->height    = buf->height;
-    pANativeWindowBuffer->stride    = buf->stride;
-    pANativeWindowBuffer->format    = buf->format;
-    pANativeWindowBuffer->usage     = buf->usage;
-    pANativeWindowBuffer->dst       = dst;
-    pANativeWindowBuffer->pObjANativeWindowBuffer = (void*)buf;
-    
-    return 0;
-}
-
-int CedarXSoftwareRenderer::enqueueFrame(ANativeWindowBufferCedarXWrapper *pObject)
-{
-    int err;
-    ANativeWindowBuffer *buf = (ANativeWindowBuffer*)pObject->pObjANativeWindowBuffer;
-    GraphicBufferMapper &mapper = GraphicBufferMapper::get();
-    CHECK_EQ(0, mapper.unlock(buf->handle));
-
-#if ((CEDARX_ANDROID_VERSION == 8) || (CEDARX_ANDROID_VERSION == 9))
-    if ((err = mNativeWindow->queueBuffer_DEPRECATED(mNativeWindow.get(), buf)) != 0) {
-        LOGW("Surface::queueBuffer returned error %d", err);
-    }
-    buf = NULL;
-#else 
-    if ((err = mNativeWindow->queueBuffer(mNativeWindow.get(), buf)) != 0) {
-        LOGW("Surface::queueBuffer returned error %d", err);
-    }
-    buf = NULL;
-#endif
-    return 0;
 }
 
 }  // namespace android

@@ -282,15 +282,6 @@ typedef enum OMX_INDEXTYPE {
     //audio render component command
     OMX_IndexVendor_AudioRenderComponent_SetVps = 0xFF000300,      //set vpsspeed to audio render. pComponentConfigStructure = (__s32)vpsspeed, -40~100
 
-    //video render component command
-    OMX_IndexVendor_VideoRenderComponent_SetVRenderMode = 0xFF000400,      //set VideoRender mode. VideoRender_GUI
-
-    //video decode component
-    OMX_IndexVendor_VideoDecodeComponent_SetDisplayFrameRequestMode = 0xFF000500,   //how to malloc display_frame. 0:malloc self; 1:malloc from GUI
-    
-    //video render component command
-    OMX_IndexVendor_VideoRenderComponent_SetVRenderPattern = 0xFF000600,            //set Video Render Pattern, gui/hw.
-    
     OMX_IndexVendorSwitchSubtilte = 0xFF001000,
     OMX_IndexVendorDisableSubtilte,
     OMX_IndexVendorSetSubtitleType,
@@ -319,7 +310,6 @@ typedef enum OMX_INDEXTYPE {
 	OMX_IndexVendorSetAudioRecorderMode,
 	OMX_IndexVendorSetRecMotionDetectionCB,
 	OMX_IndexVendorSetMotionParam,
-	OMX_IndexVendorEnableOutPutThumb,
 
 	OMX_IndexVendorProbe,		//* for the user demux module to probe.
 
@@ -340,12 +330,7 @@ typedef enum OMX_INDEXTYPE {
     OMX_IndexVendorSetDefaultLowWaterThreshold,
     OMX_IndexVendorSetDefaultHighWaterThreshold,
 
-    //add by weihongqiang for IPTV
     OMX_IndexVendorSetAVSync,
-    OMX_IndexVendorSetStreamSourceType,
-    OMX_IndexVendorClearBuffer,
-    OMX_IndexVendorSwitchAuioChannnel,
-    OMX_IndexVendorStopSyncReading,
 
     OMX_IndexMax = 0x7FFFFFFF
 

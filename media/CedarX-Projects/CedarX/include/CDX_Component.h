@@ -37,14 +37,6 @@ extern "C" {
 #include <string.h>
 #include <unistd.h>
 
-typedef enum tag_VideoRenderMode
-{
-    VideoRender_HW      = 0,    //direct set to hardware composer
-    VideoRender_SIMUHW  = 1,    //copy to gui_buffer, the method is like set hwlayer, so name as simulate hw.
-    VideoRender_SW      = 2,    //dequeue, convert to gui_buf, enqueue
-    VideoRender_GUI     = 3,    //display frame is malloc from GUI. 
-}VideoRenderMode;
-
 typedef enum DEMUX_DISABLE_TRACKINFO{
 	DEMUX_DISABLE_AUDIO_TRACK    = 1,
 	DEMUX_DISABLE_VIDEO_TRACK    = 2,
@@ -81,12 +73,6 @@ typedef struct CDX_TUNNELLINKTYPE{
 	CDX_TUNNELINFOTYPE *head;
 	CDX_TUNNELINFOTYPE *tail;
 }CDX_TUNNELLINKTYPE;
-
-typedef struct tag_CDXVideoDecodeRenderFramework{
-    CDX_S32             nVdecPlannerFlag;               //0: mb32; 1:planner
-    CDX_S32             nVdecDisplayFrameRequestMode;   //0:malloc self; 1:from gui.
-    VideoRenderMode     nVRenderMode;                   //0:hw_render; 2:software_render; 3:gui_render
-}CDXVideoDecodeRenderFramework;
 
 //------------------------------custom common component define--------------------------------------
 typedef enum ThrCmdType {

@@ -5,18 +5,19 @@ include $(CLEAR_VARS)
 include $(LOCAL_PATH)/../../Config.mk
 
 LOCAL_SRC_FILES:=                         \
-    CedarXAudioPlayer.cpp		  \
-    CedarXMetadataRetriever.cpp		  \
-    CedarXMetaData.cpp			  \
-    CedarXSoftwareRenderer.cpp		  \
-    CedarXRecorder.cpp			  \
-    CedarXPlayer.cpp			  \
-    CedarXNativeRenderer.cpp	          \
-    virtual_hwcomposer.cpp
+		CedarXAudioPlayer.cpp			  \
+        CedarXMetadataRetriever.cpp		  \
+        CedarXMetaData.cpp				  \
+        CedarXSoftwareRenderer.cpp		  \
+        CedarXRecorder.cpp				  \
+		CedarXPlayer.cpp				  \
+		CedarXNativeRenderer.cpp		\
+		virtual_hwcomposer.cpp
+
 
 LOCAL_C_INCLUDES:= \
-    $(JNI_H_INCLUDE) \
-    $(TOP)/frameworks/${AV_BASE_PATH}/include/media/stagefright \
+	$(JNI_H_INCLUDE) \
+	$(TOP)/frameworks/${AV_BASE_PATH}/include/media/stagefright \
     $(CEDARX_TOP)/include \
     $(CEDARX_TOP)/libutil \
     $(CEDARX_TOP)/include/include_cedarv \
@@ -27,7 +28,7 @@ LOCAL_C_INCLUDES:= \
     $(TOP)/frameworks/${AV_BASE_PATH} \
     $(TOP)/frameworks/${AV_BASE_PATH}/include \
     $(TOP)/external/openssl/include
-
+    
 ifeq ($(PLATFORM_VERSION),4.1.1)
     LOCAL_C_INCLUDES += $(TOP)/frameworks/native/include/media/hardware
 endif
@@ -35,8 +36,9 @@ ifeq ($(PLATFORM_VERSION),4.2.1)
     LOCAL_C_INCLUDES += $(TOP)/frameworks/native/include/media/hardware
 endif
 ifeq ($(PLATFORM_VERSION),4.2.2)
-    LOCAL_C_INCLUDES += $(TOP)/frameworks/native/include/media/hardware
+	LOCAL_C_INCLUDES += $(TOP)/frameworks/native/include/media/hardware
 endif
+
 
 LOCAL_SHARED_LIBRARIES := \
         libcedarxosal	  \
@@ -49,7 +51,7 @@ LOCAL_SHARED_LIBRARIES := \
         libcamera_client \
         libstagefright_foundation \
         libicuuc \
-	libskia 
+		libskia 
 
 ifeq ($(PLATFORM_VERSION),2.3.4)
    LOCAL_SHARED_LIBRARIES += libsurfaceflinger_client
@@ -86,8 +88,7 @@ LOCAL_STATIC_LIBRARIES += \
 	libmpeg2ts_muxer \
 	libjpgenc	\
 	libuserdemux \
-	libcedarxwvmdemux \
-	libcedarxdrmsniffer
+	libcedarxwvmdemux
 
 LOCAL_STATIC_LIBRARIES += \
 	libcedarxstream \
@@ -95,6 +96,7 @@ LOCAL_STATIC_LIBRARIES += \
 
 LOCAL_STATIC_LIBRARIES += \
 	libcedarx_rtsp
+	
 else
 LOCAL_LDFLAGS += \
 	$(CEDARX_TOP)/../CedarAndroidLib/LIB_$(CEDARX_ANDROID_CODE)_$(CEDARX_CHIP_VERSION)/libcedarxplayer.a \
@@ -112,8 +114,7 @@ LOCAL_LDFLAGS += \
 	$(CEDARX_TOP)/../CedarAndroidLib/LIB_$(CEDARX_ANDROID_CODE)_$(CEDARX_CHIP_VERSION)/libraw_muxer.a \
 	$(CEDARX_TOP)/../CedarAndroidLib/LIB_$(CEDARX_ANDROID_CODE)_$(CEDARX_CHIP_VERSION)/libmpeg2ts_muxer.a \
 	$(CEDARX_TOP)/../CedarAndroidLib/LIB_$(CEDARX_ANDROID_CODE)_$(CEDARX_CHIP_VERSION)/libjpgenc.a	\
-	$(CEDARX_TOP)/../CedarAndroidLib/LIB_$(CEDARX_ANDROID_CODE)_$(CEDARX_CHIP_VERSION)/libuserdemux.a \
-	$(CEDARX_TOP)/../CedarAndroidLib/LIB_$(CEDARX_ANDROID_CODE)_$(CEDARX_CHIP_VERSION)/libcedarxdrmsniffer.a \
+	$(CEDARX_TOP)/../CedarAndroidLib/LIB_$(CEDARX_ANDROID_CODE)_$(CEDARX_CHIP_VERSION)/libuserdemux.a
 
 LOCAL_LDFLAGS += \
 	$(CEDARX_TOP)/../CedarAndroidLib/LIB_$(CEDARX_ANDROID_CODE)_$(CEDARX_CHIP_VERSION)/libcedarxstream.a \
@@ -154,7 +155,7 @@ LOCAL_LDFLAGS += \
 	$(CEDARX_TOP)/../CedarAndroidLib/LIB_$(CEDARX_ANDROID_CODE)_$(CEDARX_CHIP_VERSION)/libdemux_idxsub.a \
 	$(CEDARX_TOP)/../CedarAndroidLib/LIB_$(CEDARX_ANDROID_CODE)_$(CEDARX_CHIP_VERSION)/libdemux_awts.a
 endif
-
+	
 ifeq ($(CEDARX_DEBUG_FRAMEWORK),Y)
 LOCAL_SHARED_LIBRARIES += libcedarxbase libswdrm libthirdpartstream libcedarxsftstream
 else
@@ -180,6 +181,7 @@ endif
 
 LOCAL_LDFLAGS += \
 	$(CEDARX_TOP)/../CedarAndroidLib/$(CEDARX_PREBUILD_LIB_PATH)/libaacenc.a
+
 
 ifeq ($(CEDARX_ENABLE_MEMWATCH),Y)
 LOCAL_STATIC_LIBRARIES += libmemwatch

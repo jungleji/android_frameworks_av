@@ -46,7 +46,6 @@ typedef enum {
     CDX_CMD_PREPARE_ASYNC     , //12
     CDX_CMD_START_ASYNC  	  ,
     CDX_CMD_TAG_START_ASYNC	  ,
-    CDX_CMD_PAUSE_TAG_START_ASYNC,  //for pause_jump, resume play
     CDX_CMD_STOP_ASYNC		  ,
     CDX_CMD_PAUSE_ASYNC		  ,
     CDX_CMD_SEEK_ASYNC        ,
@@ -74,8 +73,6 @@ typedef enum {
     CDX_SET_THIRDPART_STREAM  ,
     CDX_CMD_SUPPORT_SEEK,
 
-    CDX_CMD_NOTIFY_EOF,
-
     CDX_CMD_SET_VPS = 0x30,           
     CDX_CMD_GET_VPS,
 
@@ -98,7 +95,6 @@ typedef enum {
 	CDX_CMD_SET_CAMERA_ID,
 	CDX_CMD_GET_CAMERA_ID,
 	CDX_CMD_SET_MOTION_PARAM,
-	CDX_CMD_ENABLE_OUTPUT_THUMB,
 
     CDX_CMD_GETSUBCOUNT  = 200,
     CDX_CMD_GETSUBLIST,
@@ -135,12 +131,10 @@ typedef enum {
 	CDX_CMD_DATA_READY,
 	CDX_CMD_IS_REQUESING_DATA,
 	
-	CDX_CMD_SET_VIDEO_ROTATION, //static rotation
+	CDX_CMD_SET_VIDEO_ROTATION,
 	CDX_CMD_SET_VIDEO_MAXWIDTH,
 	CDX_CMD_SET_VIDEO_MAXHEIGHT,
 	CDX_CMD_SET_VIDEO_OUTPUT_SETTING,
-	CDX_CMD_SET_VIDEO_RENDER_PATTERN,
-	CDX_CMD_SET_VIDEO_RENDER_REINIT,
 
 	CDX_CMD_DISABLE_XXXX,
 	CDX_CMD_SET_AUDIOCHANNEL_MUTE,
@@ -177,14 +171,7 @@ typedef enum {
 	CDX_CMD_GET_CURRETN_CACHE_SIZE,
 	CDX_CMD_GET_CURRENT_BITRATE,
 
-	//add by weihongqiang for IPTV.
 	CDX_CMD_SET_AV_SYNC,
-	CDX_CMD_CLEAR_BUFFER_ASYNC,
-	CDX_CMD_SWITCH_AUDIO_CHANNEL,
-	CDX_CMD_STOP_SYNC_READING,
-
-	//add by weihongqiang temporarily to pass cts test on Android 4.2
-	CDX_CMD_SWITCH_SUBTILE_SPECIAL,
 
 	CDX_CMD_NULL,
 }CEDARX_COMMAND_TYPE;
@@ -200,11 +187,10 @@ typedef enum CEDARX_EVENT_TYPE{
     CDX_MEDIA_BUFFERING_UPDATE     = 64,
     CDX_MEDIA_WHOLE_BUFFERING_UPDATE = 128,
 
+
 	CDX_EVENT_VIDEORENDERINIT    = 65536,
 	CDX_EVENT_VIDEORENDERDATA	  ,
 	CDX_EVENT_VIDEORENDERGETDISPID,
-	CDX_EVENT_VIDEORENDER_DEQUEUEFRAME,
-	CDX_EVENT_VIDEORENDER_ENQUEUEFRAME,
 	CDX_EVENT_AUDIORENDERINIT     ,
 	CDX_EVENT_AUDIORENDEREXIT     ,
 	CDX_EVENT_AUDIORENDERDATA     ,
@@ -213,7 +199,6 @@ typedef enum CEDARX_EVENT_TYPE{
 	CDX_EVENT_VIDEORENDEREXIT     ,
 	CDX_EVENT_AUDIORENDERFLUSHCACHE,
 	CDX_EVENT_AUDIORENDERPAUSE    ,
-	CDA_EVENT_AUDIORAWPLAY,
 
 	CDX_MEDIA_INFO_SRC_3D_MODE = 65536+1000,
 	CDX_EVENT_NATIVE_SUSPEND,
@@ -228,13 +213,6 @@ typedef enum CEDARX_EVENT_TYPE{
 	CDX_EVENT_RELEASE_VIDEO_BUFFER_EXTRA_CHANNEL,
 	CDX_EVENT_MOTION_DETECTION,
 	CDX_EVENT_RECORD_DONE,
-	CDX_CMD_GET_THUMB_BUFFER,
-	CDX_CMD_RETURN_THUMB_BUFFER,
-
-	CDX_EVENT_NETWORK_ERROR,
-
-	//add by weihongqiang temporarily to pass cts test on Android 4.2
-	CDX_EVENT_TIMED_TEXT,
 }CEDARX_EVENT_TYPE;
 
 typedef enum CEDARX_STATES{
@@ -291,16 +269,6 @@ typedef enum CEDARX_THIRDPART_DEMUXER_TYPE{
 	CEDARX_THIRDPART_DEMUXER_3,
 }CEDARX_THIRDPART_DEMUXER_TYPE;
 
-
-//add by weihongqiang.
-
-typedef enum CEDARX_AUDIO_CHANNEL_TYPE {
-	CEDARX_AUDIO_CHANNEL_STEREO = 0,
-	CEDARX_AUDIO_CHANNEL_LEFT ,
-	CEDARX_AUDIO_CHANNEL_RIGHT,
-}CEDARX_AUDIO_CHANNEL_TYPE;
-
-
 #define CEDARX_MAX_AUDIO_STREAM_NUM    16
 #define CEDARX_MAX_VIDEO_STREAM_NUM     1
 #define CEDARX_MAX_SUBTITLE_STREAM_NUM 32
@@ -308,8 +276,6 @@ typedef enum CEDARX_AUDIO_CHANNEL_TYPE {
 typedef struct CedarXExternFdDesc{
 	int		fd;   //SetDataSource FD
 	long long offset;
-	//recoder where fd is now.
-	long long cur_offset;
 	long long length;
 }CedarXExternFdDesc;
 
@@ -348,7 +314,7 @@ typedef enum {
 }RECORDER_MODE;
 
 typedef enum CEDARX_MEDIA_TYPE{
-	CEDARX_MEDIATYPE_NORMAL = 1000 ,
+	CEDARX_MEDIATYPE_NORMAL = 0 ,
 	CEDARX_MEDIATYPE_RAWMUSIC   ,
 	CEDARX_MEDIATYPE_3D_VIDEO   ,
 	CEDARX_MEDIATYPE_DRM_VIDEO ,
@@ -375,7 +341,6 @@ typedef struct CedarXMediaInformations
         int     mChannels;
         int     mSampleRate;
         int     mAvgBitrate;
-        char    mLang[32];
     }mAudioInfo[CEDARX_MAX_AUDIO_STREAM_NUM];
 
     struct CedarXVideoInfo {
@@ -416,20 +381,6 @@ typedef struct CedarXPlayerCallbackType{
 }CedarXPlayerCallbackType, CedarXRecorderCallbackType;
 
 typedef int (* reqdata_from_dram)(unsigned char *pbuf, unsigned int buflen);
-
-typedef struct tag_ANativeWindowBufferCedarXWrapper //ANativeWindowBuffer
-{
-    int width;
-    int height;
-    int stride;
-    int format;
-    int usage;
-
-    void*   dst;    //memory address
-    
-    void*   pObjANativeWindowBuffer;   //ANativeWindowBuffer
-    
-} ANativeWindowBufferCedarXWrapper;
 
 #ifdef __cplusplus
 }

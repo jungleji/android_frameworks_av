@@ -13,9 +13,7 @@ typedef struct PREVIEWINFO_t
 typedef struct V4L2BUF_t
 {
 	unsigned int	addrPhyY;		// physical Y address of this frame
-	unsigned int	addrPhyC;		// physical Y address of this frame
 	unsigned int	addrVirY;		// virtual Y address of this frame
-	unsigned int	addrVirC;		// virtual Y address of this frame
 	unsigned int	width;
 	unsigned int	height;
 	int 			index;			// DQUE id number
@@ -63,11 +61,6 @@ typedef struct VIDEOINFO_t
 
 	// rotate
 	int rotate_degree;		// only support 0, 90, 180 and 270
-
-	// for video encoder
-	unsigned int picEncmode; //0 for frame encoding 1: for field encoding 2:field used for frame encoding
-	unsigned int qp_max;
-	unsigned int qp_min;
 }VIDEOINFO_t;
 
 typedef enum AUDIO_ENCODER_TYPE
@@ -153,22 +146,7 @@ typedef struct JPEG_ENC_t
 	char  			CameraMake[64];//for the cameraMake name
 	char  			CameraModel[64];//for the cameraMode
 	char  			DateTime[21];//for the data and time
-	void*           pover_overlay;
 }JPEG_ENC_t;
 
-
-typedef struct thumb_buffer
-{
-	int			   id;
-	unsigned int   width;
-	unsigned int   height;
-	unsigned char* y_vir;
-	unsigned char* uv_vir;	
-	unsigned int   y_phy;
-	unsigned int   uv_phy;
-	int size_y;
-	int size_uv;
-	long long pts;
-}thumb_buffer;
 #endif // __LIB__CAMERA__TYPE__H__
 

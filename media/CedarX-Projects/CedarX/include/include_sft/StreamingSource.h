@@ -33,9 +33,6 @@ struct StreamingSource : public Source
 
     virtual void start(int numBuffer, int bufferSize);
 
-    virtual void stop();
-    virtual void clearBuffer();
-    virtual void StopSyncReading(int stop);
     virtual status_t feedMoreTSData() {return OK;};
 
     virtual sp<MetaData> getFormat(bool audio) { return NULL;};
@@ -48,8 +45,6 @@ private:
     sp<IStreamSource> mSource;
     status_t mFinalResult;
     sp<NuPlayerStreamListener> mStreamListener;
-    bool mStopSyncReading;
-    Mutex mLock;
     DISALLOW_EVIL_CONSTRUCTORS(StreamingSource);
 };
 

@@ -25,16 +25,6 @@
 #include <CDX_Subtitle.h>
 #include <CDX_Fileformat.h>
 
-//add by weihongqiang for distinguishing
-//stream source type.
-typedef enum CEDARX_STREAM_SOURCE_TYPE {
-	CDX_STREAM_SOURCE_UNKOWN = -1,
-	CDX_STREAM_SOURCE_WD_AWTS = 0,
-	CDX_STREAM_SOURCE_WD_TS = 1,
-	//normal ts stream, need sync.
-	CDX_STREAM_SOURCE_NORMAL_TS = 2,
-}CEDARX_STREAM_SOURCE_TYPE;
-
 typedef enum CEDARX_SOURCETYPE{
 	CEDARX_SOURCE_FD,
 	CEDARX_SOURCE_FILEPATH,
@@ -58,7 +48,7 @@ typedef struct CedarXDataSourceDesc{
 	CEDARX_SOURCETYPE source_type;
 	CEDARX_MEDIA_TYPE media_type;
 	MEDIA_3DMODE_TYPE media_subtype_3d;
-	CEDARX_STREAM_SOURCE_TYPE stream_source_type;
+
 //	void *stream_info; //used for m3u/ts
 	void *m3u_handle;
 	char *buffer_data;
@@ -74,8 +64,6 @@ typedef struct CedarXDataSourceDesc{
 	void *sft_cached_source2;
 	void *sft_http_source;
 	void *sft_rtsp_source;
-	//For local drm protected source.
-	void *sft_file_source;
 	long long sft_stream_length;
 	int	 sft_stream_handle_num;
 
@@ -87,9 +75,6 @@ typedef struct CedarXDataSourceDesc{
     int   disable_seek;
 
 	pthread_mutex_t m3u_handle_mutex;
-	
-	//for haimeidi m3u9
-	char *buffer_list;
 }CedarXDataSourceDesc;
 
 typedef enum CDX_AUDIO_CODEC_TYPE {

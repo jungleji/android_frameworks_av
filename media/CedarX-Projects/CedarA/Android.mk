@@ -9,19 +9,18 @@ else
 CEDARA_VERSION_TAG = _$(CEDARX_ANDROID_CODE)_
 endif
 
-LOCAL_SRC_FILES:= \
-    CedarARender.cpp \
-    CedarAPlayer.cpp				  
+LOCAL_SRC_FILES:=                         \
+		CedarARender.cpp \
+        CedarAPlayer.cpp				  
+
 
 LOCAL_C_INCLUDES:= \
-    $(JNI_H_INCLUDE) \
-    $(LOCAL_PATH)/include \
-    ${CEDARX_TOP}/ \
-    ${CEDARX_TOP}/libcodecs/include \
-    $(TOP)/frameworks/${AV_BASE_PATH}/include/media/stagefright \
-    $(TOP)/frameworks/${AV_BASE_PATH}/include/media/stagefright/openmax \
-    $(TOP)/frameworks/native/include/media/openmax \
-    $(TOP)/frameworks/${AV_BASE_PATH}/media/libstagefright/include 
+	$(JNI_H_INCLUDE) \
+	$(LOCAL_PATH)/include \
+	${CEDARX_TOP}/ \
+	${CEDARX_TOP}/libcodecs/include \
+	$(TOP)/frameworks/${AV_BASE_PATH}/include/media/stagefright \
+    $(TOP)/frameworks/${AV_BASE_PATH}/include/media/stagefright/openmax
 
 LOCAL_SHARED_LIBRARIES := \
         libbinder         \
@@ -29,9 +28,7 @@ LOCAL_SHARED_LIBRARIES := \
         libutils          \
         libcutils         \
         libui             \
-        libCedarX	  \
-        libstagefright	  \
-        libstagefright_foundation 
+        libCedarX
 
 ifneq ($(CEDARX_DEBUG_ENABLE),Y)
 LOCAL_LDFLAGS += \
@@ -74,12 +71,29 @@ LOCAL_MODULE:= libCedarA
 
 include $(BUILD_SHARED_LIBRARY)
 
-#######################################################################################
-
 include $(call all-makefiles-under,$(LOCAL_PATH))
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 ifneq ($(CEDARX_DEBUG_ENABLE),N)
+
 include $(CLEAR_VARS)
+
 
 include $(LOCAL_PATH)/../../Config.mk
 ifeq ($(CEDARX_ANDROID_VERSION),4)
@@ -139,10 +153,10 @@ endif
 LOCAL_MODULE:= libswa2
 
 include $(BUILD_SHARED_LIBRARY)
-
 #######################################################################################
 
 include $(CLEAR_VARS)
+
 
 include $(LOCAL_PATH)/../../Config.mk
 ifeq ($(CEDARX_ANDROID_VERSION),4)
@@ -198,6 +212,7 @@ LOCAL_LDFLAGS += \
 	$(CEDARX_TOP)/../CedarAndroidLib/$(CEDARX_PREBUILD_LIB_PATH)/libogg.a \
 	$(CEDARX_TOP)/../CedarAndroidLib/$(CEDARX_PREBUILD_LIB_PATH)/libflac.a \
 	$(CEDARX_TOP)/../CedarAndroidLib/$(CEDARX_PREBUILD_LIB_PATH)/libwav.a
+	
 
 LOCAL_MODULE:= libaw_audioa
 

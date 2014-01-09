@@ -28,6 +28,7 @@
 #include <media/stagefright/CedarXAudioPlayer.h>
 #include <media/stagefright/MediaBuffer.h>
 //#include <media/stagefright/MediaClock.h>
+
 #include <media/mediaplayerinfo.h>
 
 #include <CDX_PlayerAPI.h>
@@ -54,9 +55,6 @@ struct CedarXRenderer : public RefBase {
     virtual void render(const void *data, size_t size) = 0;
     //virtual void render(MediaBuffer *buffer) = 0;
     virtual int control(int cmd, int para) = 0;
-    virtual int dequeueFrame(ANativeWindowBufferCedarXWrapper *pObject) = 0;
-    virtual int enqueueFrame(ANativeWindowBufferCedarXWrapper *pObject) = 0;
-    
 private:
     CedarXRenderer(const CedarXRenderer &);
     CedarXRenderer &operator=(const CedarXRenderer &);
@@ -67,15 +65,10 @@ typedef enum tag_KeyofSetParameter{
     PARAM_KEY_ENCRYPT_FILE_TYPE_DISABLE          = 0x00,
     PARAM_KEY_ENCRYPT_ENTIRE_FILE_TYPE           = 0x01,
     PARAM_KEY_ENCRYPT_PART_FILE_TYPE             = 0x02,
+    PARAM_KEY_SET_AV_SYNC			             = 0x03,
+    PARAM_KEY_ENABLE_KEEP_FRAME				     = 0x04,
+    
     PARAM_KEY_ENABLE_BOOTANIMATION               = 100,
-
-    //add by weihongqiang for IPTV.
-    PARAM_KEY_SET_AV_SYNC			             = 0x100,
-    PARAM_KEY_ENABLE_KEEP_FRAME				     = 0x101,
-    PARAM_KEY_CLEAR_BUFFER				     	 = 0x102,
-    //audio channel.
-    PARAM_KEY_SWITCH_CHANNEL		     	 	 = 0x103,
-    //for IPTV end.
     PARAM_KEY_,
 }KeyofSetParameter;
 
@@ -145,7 +138,6 @@ struct CedarXPlayer { //don't touch this struct any more, you can extend members
     status_t play();
     status_t pause();
     status_t stop_l();
-	status_t stop_n();
     status_t stop();
 
     bool isPlaying() const;
@@ -223,10 +215,10 @@ struct CedarXPlayer { //don't touch this struct any more, you can extend members
 
     void postAudioEOS();
     void postAudioSeekComplete();
-#if (CEDARX_ANDROID_VERSION >= 7)
     //added by weihongqiang.
     status_t invoke(const Parcel &request, Parcel *reply);
-#endif
+    status_t setVideoScalingMode(int32_t mode);
+    status_t setVideoScalingMode_l(int32_t mode);
 
     int CedarXPlayerCallback(int event, void *info);
 
@@ -298,11 +290,10 @@ private:
     uint32_t	anaglagh_en;
     uint32_t	wait_anaglagh_display_change;
 
-    int32_t mVideoWidth, mVideoHeight, mFirstFrame; //mVideoWidth:the video width told to app
+    int32_t mVideoWidth, mVideoHeight, mFirstFrame;
     int32_t mCanSeek;
     int32_t mDisplayWidth, mDisplayHeight, mDisplayFormat;  //mDisplayWidth=vdeclib_display_width, mDisplayHeight=vdeclib_display_height,so when vdeclib rotate, we should careful! mDisplayFormat:HWC_FORMAT_MBYUV422 or HAL_PIXEL_FORMAT_YV12
     int32_t mRenderToDE;
-    int32_t mPreRenderPattern;
     int32_t mLocalRenderFrameIDCurr;
     int64_t mTimeSourceDeltaUs;
     int64_t mVideoTimeUs;
@@ -313,7 +304,7 @@ private:
     int  mTagPlay; //0: none 1:first TagePlay 2: Seeding TagPlay
     bool mSeeking;
     bool mSeekNotificationSent;
-    int64_t mSeekTimeUs;    //unit:us
+    int64_t mSeekTimeUs;
     int64_t mLastValidPosition;
 
     int64_t mBitrate;  // total bitrate of the file (in bps) or -1 if unknown.
@@ -417,8 +408,6 @@ private:
     void StagefrightVideoRenderExit();
     void StagefrightVideoRenderData(void *frame_info, int frame_id);
     int StagefrightVideoRenderGetFrameID();
-    int StagefrightVideoRenderDequeueFrame(cedarv_picture_t *frame_info, int frame_id, ANativeWindowBufferCedarXWrapper *pANativeWindowBuffer);
-    int StagefrightVideoRenderEnqueueFrame(ANativeWindowBufferCedarXWrapper *pANativeWindowBuffer);
 
     int StagefrightAudioRenderInit(int samplerate, int channels, int format);
     void StagefrightAudioRenderExit(int immed);
@@ -427,24 +416,13 @@ private:
     int StagefrightAudioRenderGetDelay(void);
     int StagefrightAudioRenderFlushCache(void);
     int StagefrightAudioRenderPause(void);
-#if (CEDARX_ANDROID_VERSION >= 7)
-    //add by weihongqiang
-    status_t selectTrack(size_t trackIndex, bool select);
-    status_t getTrackInfo(Parcel *reply) const;
-    size_t countTracks() const;
-    uint8_t mCurrentSubTrack;
-#endif
-    status_t setDataSource_pre();
-    status_t setDataSource_post();
-    status_t setVideoScalingMode(int32_t mode);
-    status_t setVideoScalingMode_l(int32_t mode);
 
     CedarXPlayer(const CedarXPlayer &);
     CedarXPlayer &operator=(const CedarXPlayer &);
 
     int mVpsspeed;    //set play speed,  aux = -40~100,=0-normal; <0-slow; >0-fast, so speed scope: (100-40)% ~ (100+100)%, ret = OK
     int mDynamicRotation;   //dynamic rotate, clock wise. 0: no rotate, 1: 90 degree (clock wise), 2: 180, 3: 270, 4: horizon flip, 5: vertical flig; reverse to mediaplayerinfo.h, VideoRotateAngle_0.
-    int mInitRotation;    //record init rotate. clock wise.
+    
 //    friend struct CedarXPlayerAdapter;
 //    CedarXPlayerAdapter *pCedarXPlayerAdapter;
 };

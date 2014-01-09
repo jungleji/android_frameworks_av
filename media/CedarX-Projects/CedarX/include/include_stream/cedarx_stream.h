@@ -60,8 +60,9 @@ typedef struct cdx_stream_info {
   void *reserved_usr_1;
 
   FILE  *file_handle;
-
-  CedarXExternFdDesc fd_desc;
+#ifdef __OS_ANDROID
+  int   file_descriptor;
+#endif
 
   void* m3u8_context;
 

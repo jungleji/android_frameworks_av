@@ -36,8 +36,6 @@ struct NuPlayerStreamListener : public BnStreamListener
     virtual void issueCommand(Command cmd, bool synchronous, const sp<AMessage> &extra);
 
     void start();
-    void stop();
-    void clearBuffer();
 
     ssize_t read(void *data, size_t size, sp<AMessage> *extra);
 
