@@ -68,6 +68,8 @@
 #include <ctype.h>
 #endif
 
+#define MAX_INPUT_BUFFER_SIZE 300000
+
 namespace android {
 
 #ifdef USE_SAMSUNG_COLORFORMAT
@@ -788,10 +790,12 @@ status_t OMXCodec::configureCodec(const sp<MetaData> &meta) {
         if (mIsEncoder) {
             setVideoInputFormat(mMIME, meta);
         } else {
+            ALOGD("%s: call setVideoOutputFormat() ", __FUNCTION__);
             status_t err = setVideoOutputFormat(
                     mMIME, meta);
 
             if (err != OK) {
+                ALOGW("%s: return error: %d", __FUNCTION__, err);
                 return err;
             }
 
@@ -804,6 +808,9 @@ status_t OMXCodec::configureCodec(const sp<MetaData> &meta) {
     int32_t maxInputSize;
     if (meta->findInt32(kKeyMaxInputSize, &maxInputSize)) {
         setMinBufferSize(kPortIndexInput, (OMX_U32)maxInputSize);
+    } else {
+        ALOGD("%s: change maxInputSize to %d", __FUNCTION__, MAX_INPUT_BUFFER_SIZE);
+        setMinBufferSize(kPortIndexInput, (OMX_U32)MAX_INPUT_BUFFER_SIZE);
     }
 
     initOutputFormat(meta);
@@ -1930,6 +1937,7 @@ status_t OMXCodec::allocateBuffersOnPort(OMX_U32 portIndex) {
                     || (mFlags & kUseSecureInputBuffers))) {
             if (mOMXLivesLocally) {
                 mem.clear();
+                ALOGD("portIndexInput: mOMXLivesLocally, call mOMX->allocateBuffer");
 
                 err = mOMX->allocateBuffer(
                         mNode, portIndex, def.nBufferSize, &buffer,
@@ -1943,6 +1951,7 @@ status_t OMXCodec::allocateBuffersOnPort(OMX_U32 portIndex) {
             if (mOMXLivesLocally) {
                 mem.clear();
 
+                ALOGD("portIndexOutput: mOMXLivesLocally, call mOMX->allocateBuffer");
                 err = mOMX->allocateBuffer(
                         mNode, portIndex, def.nBufferSize, &buffer,
                         &info.mData);
@@ -2012,7 +2021,7 @@ status_t OMXCodec::allocateBuffersOnPort(OMX_U32 portIndex) {
         }
     }
 
-    // dumpPortStatus(portIndex);
+    dumpPortStatus(portIndex);
 
     if (portIndex == kPortIndexInput && (mFlags & kUseSecureInputBuffers)) {
         Vector<MediaBuffer *> buffers;
@@ -2038,6 +2047,7 @@ status_t OMXCodec::allocateBuffersOnPort(OMX_U32 portIndex) {
             return err;
         }
     }
+    ALOGD("%s: return OK", __FUNCTION__);
 
     return OK;
 }
@@ -4958,6 +4968,7 @@ static const char *amrFrameFormatString(OMX_AUDIO_AMRFRAMEFORMATTYPE type) {
 }
 
 void OMXCodec::dumpPortStatus(OMX_U32 portIndex) {
+    ALOGD("%s: ", __FUNCTION__);
     OMX_PARAM_PORTDEFINITIONTYPE def;
     InitOMXParams(&def);
     def.nPortIndex = portIndex;
