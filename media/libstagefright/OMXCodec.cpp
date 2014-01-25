@@ -68,7 +68,7 @@
 #include <ctype.h>
 #endif
 
-#define MAX_INPUT_BUFFER_SIZE 300000
+#define MAX_INPUT_BUFFER_SIZE (64*8*1024)
 
 namespace android {
 
