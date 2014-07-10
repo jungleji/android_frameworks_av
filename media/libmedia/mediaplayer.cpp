@@ -71,6 +71,23 @@ MediaPlayer::~MediaPlayer()
     IPCThreadState::self()->flushCommands();
 }
 
+status_t MediaPlayer::isBluray()
+{
+    ALOGD("isBluray");
+    Mutex::Autolock _l(mLock);
+    const bool hasBeenInitialized =
+        (mCurrentState != MEDIA_PLAYER_STATE_ERROR) &&
+        ((mCurrentState & MEDIA_PLAYER_IDLE) != MEDIA_PLAYER_IDLE);
+
+    if ((mPlayer != NULL) && hasBeenInitialized) {
+        return mPlayer->isBluray();
+    } else {
+        ALOGE("isBluray() fail");
+    }
+
+    return 1;
+}
+
 void MediaPlayer::disconnect()
 {
     ALOGV("disconnect");

@@ -59,6 +59,7 @@ enum {
     SET_NEXT_PLAYER,
     SUSPEND,
     RESUME,
+    IS_BLURAY,
 };
 
 class BpMediaPlayer: public BpInterface<IMediaPlayer>
@@ -356,6 +357,14 @@ public:
         remote()->transact(RESUME, data, &reply);
         return reply.readInt32();
      }
+
+     status_t isBluray()
+     {
+         Parcel data, reply;
+         data.writeInterfaceToken(IMediaPlayer::getInterfaceDescriptor());
+         remote()->transact(IS_BLURAY, data, &reply);
+         return reply.readInt32();
+     }
 };
 
 IMPLEMENT_META_INTERFACE(MediaPlayer, "android.media.IMediaPlayer");
@@ -565,6 +574,11 @@ status_t BnMediaPlayer::onTransact(
             CHECK_INTERFACE(IMediaPlayer, data, reply);
             status_t ret = resume();
             reply->writeInt32(ret);
+            return NO_ERROR;
+        } break;
+        case IS_BLURAY: {
+            CHECK_INTERFACE(IMediaPlayer, data, reply);
+            reply->writeInt32(isBluray());
             return NO_ERROR;
         } break;
         default:

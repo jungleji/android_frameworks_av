@@ -340,6 +340,14 @@ status_t AudioTrack::set(
         ALOGE("Invalid channel mask %#x", channelMask);
         return BAD_VALUE;
     }
+
+    if( (AUDIO_OUTPUT_FLAG_DIRECT != flags) &&
+        (AUDIO_CHANNEL_OUT_5POINT1 == channelMask)) {
+        flags = AUDIO_OUTPUT_FLAG_DIRECT;
+    } else if( AUDIO_OUTPUT_FLAG_DIRECT == flags){
+        channelMask = AUDIO_CHANNEL_OUT_STEREO;
+    }
+
     mChannelMask = channelMask;
     uint32_t channelCount = popcount(channelMask);
     mChannelCount = channelCount;
@@ -438,6 +446,11 @@ status_t AudioTrack::set(
         ALOGE("Could not get audio output for stream type %d", streamType);
         return BAD_VALUE;
     }
+
+    if (output != 2)
+        property_set("media.cfg.audio.soundeffect", "false");
+    else
+        property_set("media.cfg.audio.soundeffect", "true");
 
     mVolume[LEFT] = 1.0f;
     mVolume[RIGHT] = 1.0f;

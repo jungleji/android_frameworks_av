@@ -17,6 +17,7 @@
 //#define LOG_NDEBUG 0
 #define LOG_TAG "SoundPool"
 #include <utils/Log.h>
+#include <cutils/properties.h>
 
 #define USE_SHARED_MEM_BUFFER
 
@@ -248,6 +249,14 @@ int SoundPool::play(int sampleID, float leftVolume, float rightVolume,
     if (mQuit) {
         return 0;
     }
+
+    char value[PROPERTY_VALUE_MAX] = "";
+    property_get("media.cfg.audio.soundeffect", value, "-1");
+    if(memcmp(value, "false", 5) == 0){
+        //ALOGD("do not play soundeffect...");
+        return 0;
+    }
+
     // is sample ready?
     sample = findSample(sampleID);
     if ((sample == 0) || (sample->state() != Sample::READY)) {

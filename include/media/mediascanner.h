@@ -64,6 +64,7 @@ private:
     char *mLocale;
     char *mSkipList;
     int *mSkipIndex;
+    int mProcessretries;
 
     MediaScanResult doProcessDirectory(
             char *path, int pathRemaining, MediaScannerClient &client, bool noMedia);
@@ -76,6 +77,7 @@ private:
 
     MediaScanner(const MediaScanner &);
     MediaScanner &operator=(const MediaScanner &);
+    bool isBDDirectory(char* path);
 };
 
 class MediaScannerClient
@@ -92,6 +94,8 @@ public:
             long long fileSize, bool isDirectory, bool noMedia) = 0;
     virtual status_t handleStringTag(const char* name, const char* value) = 0;
     virtual status_t setMimeType(const char* mimeType) = 0;
+    virtual status_t scanBDDirectory(const char* path, long long lastModified,
+                                     long long fileSize) = 0;
 
 protected:
     void convertValues(uint32_t encoding);
