@@ -394,6 +394,8 @@ private:
         virtual status_t        suspend();
         virtual status_t        resume();
 
+                status_t        isBluray();
+
     private:
         friend class MediaPlayerService;
                                 Client( const sp<MediaPlayerService>& service,
@@ -467,6 +469,7 @@ private:
                 int32_t                     mNextConnId;
                 sp<IOMX>                    mOMX;
                 sp<ICrypto>                 mCrypto;
+                sp<IHDCP>                   mHDCP;
 };
 
 // ----------------------------------------------------------------------------

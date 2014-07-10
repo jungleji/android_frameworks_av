@@ -22,6 +22,11 @@ LOCAL_SRC_FILES:=               \
     StagefrightPlayer.cpp       \
     StagefrightRecorder.cpp     \
     TestPlayerStub.cpp          \
+    ApePlayer.cpp               \
+    FFPlayer.cpp                \
+    RKBOXFFPlayer.cpp           \
+
+LOCAL_CFLAGS := -DAVS44
 
 LOCAL_SHARED_LIBRARIES :=       \
     libbinder                   \
@@ -32,6 +37,8 @@ LOCAL_SHARED_LIBRARIES :=       \
     libgui                      \
     libmedia                    \
     libsonivox                  \
+    librkffplayer               \
+    librkboxffplayer            \
     libstagefright              \
     libstagefright_foundation   \
     libstagefright_httplive     \
@@ -40,6 +47,7 @@ LOCAL_SHARED_LIBRARIES :=       \
     libutils                    \
     libdl                       \
     libvorbisidec               \
+    libapedec                   \
 
 LOCAL_STATIC_LIBRARIES :=       \
     libstagefright_nuplayer     \
@@ -52,6 +60,12 @@ LOCAL_C_INCLUDES :=                                                 \
     $(TOP)/frameworks/av/media/libstagefright/wifi-display          \
     $(TOP)/frameworks/native/include/media/openmax                  \
     $(TOP)/external/tremolo/Tremolo                                 \
+    $(TOP)/external/ffmpeg                                          \
+    $(TOP)/frameworks/av/media/libstagefright/libvpu/common         \
+    $(TOP)/frameworks/av/media/libstagefright/libvpu/common/include \
+    $(TOP)/hardware/rk29/libon2                                     \
+    $(LOCAL_PATH)/rk_ffplayer                                       \
+    $(LOCAL_PATH)/rkbox_ffplayer                                    \
 
 ifeq ($(BOARD_USES_QCOM_HARDWARE),true)
     ifneq ($(TARGET_QCOM_MEDIA_VARIANT),)

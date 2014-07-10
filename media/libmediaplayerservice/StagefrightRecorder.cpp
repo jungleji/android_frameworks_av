@@ -42,6 +42,7 @@
 #include <media/stagefright/CameraSource.h>
 #include <media/stagefright/CameraSourceTimeLapse.h>
 #include <media/stagefright/MPEG2TSWriter.h>
+#include <media/stagefright/MIRRORINGWriter.h>
 #include <media/stagefright/MPEG4Writer.h>
 #include <media/stagefright/MediaDefs.h>
 #include <media/stagefright/MetaData.h>
@@ -58,6 +59,9 @@
 #include <sys/types.h>
 #include <ctype.h>
 #include <unistd.h>
+#include <media/stagefright/Video_Mirror_Source.h>
+#include <media/stagefright/Audio_Mirror_Source.h>
+#include <dlfcn.h>
 
 #include <system/audio.h>
 #ifdef QCOM_HARDWARE
@@ -95,7 +99,8 @@ StagefrightRecorder::StagefrightRecorder()
       mCaptureTimeLapse(false),
       mStarted(false),
       mSurfaceMediaSource(NULL),
-      mRecPaused(false) {
+      mRecPaused(false),
+      m_handle(NULL) {
 
     ALOGV("Constructor");
     reset();
@@ -226,7 +231,7 @@ status_t StagefrightRecorder::setVideoEncoder(video_encoder ve) {
     }
 
     if (ve == VIDEO_ENCODER_DEFAULT) {
-        mVideoEncoder = VIDEO_ENCODER_H263;
+        mVideoEncoder = VIDEO_ENCODER_H264;
     } else {
         mVideoEncoder = ve;
     }
@@ -235,6 +240,8 @@ status_t StagefrightRecorder::setVideoEncoder(video_encoder ve) {
 }
 
 status_t StagefrightRecorder::setVideoSize(int width, int height) {
+    int low_quality_w,low_quality_h,high_quality_w,high_quality_h, framerate=-1,minFrameRate;
+    camcorder_quality quality=CAMCORDER_QUALITY_LOW;
     ALOGV("setVideoSize: %dx%d", width, height);
     if (width <= 0 || height <= 0) {
         ALOGE("Invalid video size: %dx%d", width, height);
@@ -244,6 +251,40 @@ status_t StagefrightRecorder::setVideoSize(int width, int height) {
     // Additional check on the dimension will be performed later
     mVideoWidth = width;
     mVideoHeight = height;
+
+    minFrameRate = mEncoderProfiles->getVideoEncoderParamByName("enc.vid.fps.min", mVideoEncoder);
+    if ((mFrameRate == -1) || (mFrameRate == minFrameRate)) {     /* ddl@rock-chips.com */
+        low_quality_w = mEncoderProfiles->getCamcorderProfileParamByName
+                        ("vid.width",mCameraId,CAMCORDER_QUALITY_LOW);
+        low_quality_h = mEncoderProfiles->getCamcorderProfileParamByName
+                        ("vid.height",mCameraId,CAMCORDER_QUALITY_LOW);
+        high_quality_w = mEncoderProfiles->getCamcorderProfileParamByName
+                        ("vid.width",mCameraId,CAMCORDER_QUALITY_HIGH);
+        high_quality_h = mEncoderProfiles->getCamcorderProfileParamByName
+                        ("vid.height",mCameraId,CAMCORDER_QUALITY_HIGH);
+        if ((width == low_quality_w) && (height == low_quality_h)) {
+            quality = CAMCORDER_QUALITY_LOW;
+        } else if ((width == high_quality_w) && (height == high_quality_h)) {
+            quality = CAMCORDER_QUALITY_HIGH;
+        } else if ((width == 176) && (height == 144)) {
+            quality = CAMCORDER_QUALITY_QCIF;
+        } else if ((width == 352) && (height == 288)) {
+            quality = CAMCORDER_QUALITY_CIF;
+        } else if ((width == 320) && (height == 240)) {
+            quality = CAMCORDER_QUALITY_QVGA;
+        } else if (height == 480) {
+            quality = CAMCORDER_QUALITY_480P;
+        } else if ((width == 1280) && (height == 720)) {
+            quality = CAMCORDER_QUALITY_720P;
+        } else if ((width == 1920) && (height == 1080)) {
+            quality = CAMCORDER_QUALITY_1080P;
+        }
+        framerate = mEncoderProfiles->getCamcorderProfileParamByName
+                    ("vid.fps",mCameraId,quality);
+        setVideoFrameRate(framerate);
+        ALOGW("Intended video encoding frame rate (%d fps) is too small"
+             " and will be set to (%d fps quality: %d)", mFrameRate, framerate,quality);
+    }
 
     return OK;
 }
@@ -877,6 +918,8 @@ status_t StagefrightRecorder::start() {
             status = startWAVERecording( );
             break;
 #endif
+        case OUTPUT_FORMAT_MIRRORINGTS:
+            return startMIRRORINGTSRecording();
         default:
             ALOGE("Unsupported output file format: %d", mOutputFormat);
             status = UNKNOWN_ERROR;
@@ -936,22 +979,23 @@ sp<MediaSource> StagefrightRecorder::createAudioSource() {
     }
 #endif
 
-    sp<AudioSource> audioSource =
-        new AudioSource(
-                mAudioSource,
-                mSampleRate,
-                mAudioChannels);
+    if(mOutputFormat != OUTPUT_FORMAT_MIRRORINGTS) {
+        sp<AudioSource> audioSource =
+            new AudioSource(
+                            mAudioSource,
+                            mSampleRate,
+                            mAudioChannels);
 
-    status_t err = audioSource->initCheck();
+        status_t err = audioSource->initCheck();
 
-    if (err != OK) {
-        ALOGE("audio source is not initialized");
-        return NULL;
-    }
+        if (err != OK) {
+            ALOGE("audio source is not initialized");
+            return NULL;
+        }
 
-    sp<MetaData> encMeta = new MetaData;
-    const char *mime;
-    switch (mAudioEncoder) {
+        sp<MetaData> encMeta = new MetaData;
+        const char *mime;
+        switch (mAudioEncoder) {
 #ifdef QCOM_HARDWARE
         case AUDIO_ENCODER_LPCM:
             mime = MEDIA_MIMETYPE_AUDIO_RAW;
@@ -988,52 +1032,82 @@ sp<MediaSource> StagefrightRecorder::createAudioSource() {
         default:
             ALOGE("Unknown audio encoder: %d", mAudioEncoder);
             return NULL;
-    }
-    encMeta->setCString(kKeyMIMEType, mime);
+        }
+        encMeta->setCString(kKeyMIMEType, mime);
 
-    int32_t maxInputSize;
-    CHECK(audioSource->getFormat()->findInt32(
-                kKeyMaxInputSize, &maxInputSize));
+        int32_t maxInputSize;
+        CHECK(audioSource->getFormat()->findInt32(
+                                                  kKeyMaxInputSize, &maxInputSize));
 
-    encMeta->setInt32(kKeyMaxInputSize, maxInputSize);
-    encMeta->setInt32(kKeyChannelCount, mAudioChannels);
-    encMeta->setInt32(kKeySampleRate, mSampleRate);
-    encMeta->setInt32(kKeyBitRate, mAudioBitRate);
-    if (mAudioTimeScale > 0) {
-        encMeta->setInt32(kKeyTimeScale, mAudioTimeScale);
-    }
+        encMeta->setInt32(kKeyMaxInputSize, maxInputSize);
+        encMeta->setInt32(kKeyChannelCount, mAudioChannels);
+        encMeta->setInt32(kKeySampleRate, mSampleRate);
+        encMeta->setInt32(kKeyBitRate, mAudioBitRate);
+        if (mAudioTimeScale > 0) {
+            encMeta->setInt32(kKeyTimeScale, mAudioTimeScale);
+        }
 
-    OMXClient client;
-    CHECK_EQ(client.connect(), (status_t)OK);
+        OMXClient client;
+        CHECK_EQ(client.connect(), (status_t)OK);
 #ifdef ENABLE_AV_ENHANCEMENTS
-    sp<MediaSource> audioEncoder;
-    if (ExtendedUtils::UseQCHWAACEncoder(mAudioEncoder,mAudioChannels,mAudioBitRate,mSampleRate)) {
-        ALOGV("use QCOM HW AAC encoder");
-        audioEncoder = OMXCodec::Create(client.interface(), encMeta,
-            true /* createEncoder */, audioSource,"OMX.qcom.audio.encoder.aac",OMXCodec::kHardwareCodecsOnly );
-    } else {
-        audioEncoder = OMXCodec::Create(client.interface(), encMeta,
-            true /* createEncoder */, audioSource);
-    }
+        sp<MediaSource> audioEncoder;
+        if (ExtendedUtils::UseQCHWAACEncoder(mAudioEncoder,mAudioChannels,mAudioBitRate,mSampleRate)) {
+            ALOGV("use QCOM HW AAC encoder");
+            audioEncoder = OMXCodec::Create(client.interface(), encMeta,
+                                            true /* createEncoder */, audioSource,"OMX.qcom.audio.encoder.aac",OMXCodec::kHardwareCodecsOnly );
+        } else {
+            audioEncoder = OMXCodec::Create(client.interface(), encMeta,
+                                            true /* createEncoder */, audioSource);
+        }
 #else
-    sp<MediaSource> audioEncoder =
-        OMXCodec::Create(client.interface(), encMeta,
-                         true /* createEncoder */, audioSource);
+        sp<MediaSource> audioEncoder =
+            OMXCodec::Create(client.interface(), encMeta,
+                             true /* createEncoder */, audioSource);
 #endif
 #ifdef QCOM_HARDWARE
-    if (audioEncoder == NULL) {
-        ALOGD("No encoder is needed, use the AudioSource directly as the MediaSource for LPCM format");
-        audioEncoder = audioSource;
-    } else {
-        mAudioEncoderOMX = audioEncoder;  //record the audio OMX-based encoder
-    }
-    if (mAudioSourceNode != NULL) {
-        mAudioSourceNode.clear();
-    }
+        if (audioEncoder == NULL) {
+            ALOGD("No encoder is needed, use the AudioSource directly as the MediaSource for LPCM format");
+            audioEncoder = audioSource;
+        } else {
+            mAudioEncoderOMX = audioEncoder;  //record the audio OMX-based encoder
+        }
+        if (mAudioSourceNode != NULL) {
+            mAudioSourceNode.clear();
+        }
 #endif
-    mAudioSourceNode = audioSource;
+        mAudioSourceNode = audioSource;
 
-    return audioEncoder;
+        return audioEncoder;
+
+    } else {
+        MediaSource* (*mAudio_Mirror_Source)(int32_t sampleRate, int32_t numChannels);
+        if(m_handle==NULL)
+            {
+                ALOGE("lib sf can't be loaded");
+                return NULL;
+            }
+        mAudio_Mirror_Source = (MediaSource* (*)(int32_t sampleRate, int32_t numChannels))::dlsym(m_handle, "openAudio_Mirror_Source");
+        if(mAudio_Mirror_Source==NULL)
+            {
+                ALOGE("Audio_Mirror_Source don't exit");
+                return NULL;
+            }
+        sp<MediaSource> audioSource = mAudio_Mirror_Source(mSampleRate, mAudioChannels);
+        int32_t maxInputSize;
+        CHECK(audioSource->getFormat()->findInt32(
+                                                  kKeyMaxInputSize, &maxInputSize));
+        sp<MetaData> encMeta = new MetaData;
+        encMeta->setCString(kKeyMIMEType,MEDIA_MIMETYPE_AUDIO_AAC);
+        encMeta->setInt32(kKeySampleRate, mSampleRate);
+        encMeta->setInt32(kKeyChannelCount, mAudioChannels);
+        encMeta->setInt32(kKeyMaxInputSize, maxInputSize);
+        encMeta->setInt32(kKeyBitRate, mAudioBitRate);
+        OMXClient client;
+        CHECK_EQ(client.connect(), (status_t)OK);
+        sp<MediaSource> audioEncoder =
+            OMXCodec::Create(client.interface(), encMeta, true, audioSource,"AACEncoder");    
+        return audioEncoder;
+    }
 }
 
 status_t StagefrightRecorder::startAACRecording() {
@@ -1240,6 +1314,73 @@ status_t StagefrightRecorder::startMPEG2TSRecording() {
     return mWriter->start();
 }
 
+ status_t StagefrightRecorder::startMIRRORINGTSRecording() {
+     CHECK_EQ(mOutputFormat, OUTPUT_FORMAT_MIRRORINGTS);
+     MediaWriter* (*mMIRRORINGWriter)(unsigned long addr, unsigned short local_port,unsigned short remort_port);
+     m_handle = dlopen("libstagefright.so", RTLD_LAZY | RTLD_LOCAL);
+     if(m_handle == NULL)
+         {
+             ALOGE("lib sf can't be loaded");
+             return UNKNOWN_ERROR;
+         }
+     mMIRRORINGWriter = (MediaWriter* (*)(unsigned long , unsigned short,unsigned short ))::dlsym(m_handle, "openMIRRORINGWriter");
+     if(mMIRRORINGWriter==NULL)
+         {
+             ALOGE("MIRRORINGWriter don't exit");
+             return UNKNOWN_ERROR;
+         }
+     sp<MediaWriter> writer = mMIRRORINGWriter(inet_addr("192.168.0.108"),65344,65344);//port&0xffff); //local_port, remort_port(addr,0xff40,0xff40);
+     status_t err;
+     if (mAudioSource != AUDIO_SOURCE_CNT) {
+         if (mAudioEncoder != AUDIO_ENCODER_AAC) {
+             return ERROR_UNSUPPORTED;
+         }
+         err = setupAudioEncoder(writer);
+         if (err != OK) {
+             return err;
+         }
+     }
+     else{
+         err = setupAudioEncoder(writer); //jmj
+         if (err != OK) {
+             return err;
+         }
+     }
+     if(mMaxFileSizeBytes != 0x12345)
+         {
+             ALOGD("startMIRRORINGTSRecording mVideoSource  %d  mVideoEncoder  %d", mVideoSource,mVideoEncoder);
+             if (mVideoSource == VIDEO_SOURCE_LIST_END
+                 || mVideoSource == VIDEO_SOURCE_CAMERA|| mVideoSource == VIDEO_SOURCE_UI) {//jmj
+                 if (mVideoEncoder != VIDEO_ENCODER_H264) {
+                     return ERROR_UNSUPPORTED;
+                 }
+                 sp<MediaSource> mediaSource;
+                 err = setupMediaSource(&mediaSource);
+                 if (err != OK) {
+                     return err;
+                 }
+                 sp<MediaSource> encoder;
+                 err = setupVideoEncoder(mediaSource, mVideoBitRate, &encoder);
+                 if (err != OK) {
+                     return err;
+                 }
+                 writer->addSource(encoder);
+             }
+         }
+     if (mMaxFileDurationUs != 0) {
+         writer->setMaxFileDuration(mMaxFileDurationUs);
+     }
+     if (mMaxFileSizeBytes != 0) {
+         writer->setMaxFileSize(mMaxFileSizeBytes);
+     }
+     mWriter = writer;
+     if(m_handle!=NULL)
+         dlclose(m_handle);
+     else
+         return UNKNOWN_ERROR;
+     return mWriter->start();
+}
+
 void StagefrightRecorder::clipVideoFrameRate() {
     ALOGV("clipVideoFrameRate: encoder %d", mVideoEncoder);
     int minFrameRate = mEncoderProfiles->getVideoEncoderParamByName(
@@ -1297,15 +1438,8 @@ status_t StagefrightRecorder::checkVideoEncoderCapabilities(
     Vector<CodecCapabilities> codecs;
     OMXClient client;
     CHECK_EQ(client.connect(), (status_t)OK);
-    QueryCodecs(
-            client.interface(),
-            (mVideoEncoder == VIDEO_ENCODER_H263 ? MEDIA_MIMETYPE_VIDEO_H263 :
-             mVideoEncoder == VIDEO_ENCODER_MPEG_4_SP ? MEDIA_MIMETYPE_VIDEO_MPEG4 :
-             mVideoEncoder == VIDEO_ENCODER_H264 ? MEDIA_MIMETYPE_VIDEO_AVC : ""),
-            false /* decoder */, true /* hwCodec */, &codecs);
-    *supportsCameraSourceMetaDataMode = codecs.size() > 0;
-    ALOGV("encoder %s camera source meta-data mode",
-            *supportsCameraSourceMetaDataMode ? "supports" : "DOES NOT SUPPORT");
+
+    *supportsCameraSourceMetaDataMode = true;
 
     if (!mCaptureTimeLapse) {
         // Dont clip for time lapse capture as encoder will have enough
@@ -1471,13 +1605,23 @@ void StagefrightRecorder::clipVideoFrameHeight() {
 status_t StagefrightRecorder::setupMediaSource(
                       sp<MediaSource> *mediaSource) {
     if (mVideoSource == VIDEO_SOURCE_DEFAULT
-            || mVideoSource == VIDEO_SOURCE_CAMERA) {
-        sp<CameraSource> cameraSource;
-        status_t err = setupCameraSource(&cameraSource);
-        if (err != OK) {
-            return err;
+            || mVideoSource == VIDEO_SOURCE_CAMERA ||mVideoSource == VIDEO_SOURCE_UI ) {
+        if (mVideoSource != VIDEO_SOURCE_UI) {
+            sp<CameraSource> cameraSource;
+            status_t err = setupCameraSource(&cameraSource);
+            if (err != OK) {
+                return err;
+            }
+            *mediaSource = cameraSource;
+        } else {
+            sp<MediaSource> uiSource;
+            ALOGE("setupMediaSource setupUISource");
+            status_t err = setupUISource(&uiSource);
+            if (err != OK) {
+                return err;
+            }
+            *mediaSource = uiSource;
         }
-        *mediaSource = cameraSource;
     } else if (mVideoSource == VIDEO_SOURCE_GRALLOC_BUFFER) {
         // If using GRAlloc buffers, setup surfacemediasource.
         // Later a handle to that will be passed
@@ -1592,17 +1736,39 @@ status_t StagefrightRecorder::setupCameraSource(
     return OK;
 }
 
+status_t StagefrightRecorder::setupUISource(sp<MediaSource> *uiSource) {
+    status_t err = OK;
+    int width = mVideoWidth;
+    int height = mVideoHeight;
+    MediaSource* (*mVideo_Mirror_Source)(int width, int height, int colorFormat);
+    if(m_handle==NULL)
+        {
+            ALOGE("lib sf can't be loaded");
+            return UNKNOWN_ERROR;
+        }
+    mVideo_Mirror_Source = (MediaSource* (*)(int width, int height, int colorFormat))::dlsym(m_handle, "openVideo_Mirror_Source");
+    if(mVideo_Mirror_Source==NULL)
+        {
+            ALOGE("Video_Mirror_Source don't exit");
+            return UNKNOWN_ERROR;
+        }
+    *uiSource = mVideo_Mirror_Source(width, height, OMX_COLOR_FormatYUV420Planar);
+
+    return OK;
+}
+
 status_t StagefrightRecorder::setupVideoEncoder(
         sp<MediaSource> cameraSource,
         int32_t videoBitRate,
         sp<MediaSource> *source) {
     source->clear();
 
-    sp<MetaData> enc_meta = new MetaData;
-    enc_meta->setInt32(kKeyBitRate, videoBitRate);
-    enc_meta->setInt32(kKeyFrameRate, mFrameRate);
+    if (mVideoSource != VIDEO_SOURCE_UI) {
+        sp<MetaData> enc_meta = new MetaData;
+        enc_meta->setInt32(kKeyBitRate, videoBitRate);
+        enc_meta->setInt32(kKeyFrameRate, mFrameRate);
 
-    switch (mVideoEncoder) {
+        switch (mVideoEncoder) {
         case VIDEO_ENCODER_H263:
             enc_meta->setCString(kKeyMIMEType, MEDIA_MIMETYPE_VIDEO_H263);
             break;
@@ -1618,78 +1784,129 @@ status_t StagefrightRecorder::setupVideoEncoder(
         default:
             CHECK(!"Should not be here, unsupported video encoding.");
             break;
-    }
+        }
 
-    sp<MetaData> meta = cameraSource->getFormat();
+        sp<MetaData> meta = cameraSource->getFormat();
 
-    int32_t width, height, stride, sliceHeight, colorFormat;
-    CHECK(meta->findInt32(kKeyWidth, &width));
-    CHECK(meta->findInt32(kKeyHeight, &height));
-    CHECK(meta->findInt32(kKeyStride, &stride));
-    CHECK(meta->findInt32(kKeySliceHeight, &sliceHeight));
-    CHECK(meta->findInt32(kKeyColorFormat, &colorFormat));
+        int32_t width, height, stride, sliceHeight, colorFormat;
+        CHECK(meta->findInt32(kKeyWidth, &width));
+        CHECK(meta->findInt32(kKeyHeight, &height));
+        CHECK(meta->findInt32(kKeyStride, &stride));
+        CHECK(meta->findInt32(kKeySliceHeight, &sliceHeight));
+        CHECK(meta->findInt32(kKeyColorFormat, &colorFormat));
 
-    enc_meta->setInt32(kKeyWidth, width);
-    enc_meta->setInt32(kKeyHeight, height);
-    enc_meta->setInt32(kKeyIFramesInterval, mIFramesIntervalSec);
-    enc_meta->setInt32(kKeyStride, stride);
-    enc_meta->setInt32(kKeySliceHeight, sliceHeight);
-    enc_meta->setInt32(kKeyColorFormat, colorFormat);
-    if (mVideoTimeScale > 0) {
-        enc_meta->setInt32(kKeyTimeScale, mVideoTimeScale);
-    }
+        enc_meta->setInt32(kKeyWidth, width);
+        enc_meta->setInt32(kKeyHeight, height);
+        enc_meta->setInt32(kKeyIFramesInterval, mIFramesIntervalSec);
+        enc_meta->setInt32(kKeyStride, stride);
+        enc_meta->setInt32(kKeySliceHeight, sliceHeight);
+        enc_meta->setInt32(kKeyColorFormat, colorFormat);
+        if (mVideoTimeScale > 0) {
+            enc_meta->setInt32(kKeyTimeScale, mVideoTimeScale);
+        }
 
 #ifdef QCOM_HARDWARE
-    status_t retVal = ExtendedUtils::HFR::initializeHFR(
-            meta, enc_meta, mMaxFileDurationUs, mVideoEncoder);
-    if(retVal != OK) {
-        return retVal;
-    }
+        status_t retVal = ExtendedUtils::HFR::initializeHFR(
+                                                            meta, enc_meta, mMaxFileDurationUs, mVideoEncoder);
+        if(retVal != OK) {
+            return retVal;
+        }
 
-    ExtendedUtils::ShellProp::setEncoderProfile(mVideoEncoder, mVideoEncoderProfile);
+        ExtendedUtils::ShellProp::setEncoderProfile(mVideoEncoder, mVideoEncoderProfile);
 #endif
 
-    if (mVideoEncoderProfile != -1) {
-        enc_meta->setInt32(kKeyVideoProfile, mVideoEncoderProfile);
+        if (mVideoEncoderProfile != -1) {
+            enc_meta->setInt32(kKeyVideoProfile, mVideoEncoderProfile);
+        }
+        if (mVideoEncoderLevel != -1) {
+            enc_meta->setInt32(kKeyVideoLevel, mVideoEncoderLevel);
+        }
+
+        OMXClient client;
+        CHECK_EQ(client.connect(), (status_t)OK);
+
+        uint32_t encoder_flags = 0;
+        if (mIsMetaDataStoredInVideoBuffers) {
+            encoder_flags |= OMXCodec::kStoreMetaDataInVideoBuffers;
+        }
+
+        // Do not wait for all the input buffers to become available.
+        // This give timelapse video recording faster response in
+        // receiving output from video encoder component.
+        if (mCaptureTimeLapse) {
+            encoder_flags |= OMXCodec::kOnlySubmitOneInputBufferAtOneTime;
+        }
+        // encoder_flags |= ExtendedUtils::getEncoderTypeFlags();
+
+        sp<MediaSource> encoder = OMXCodec::Create(
+                                                   client.interface(), enc_meta,
+                                                   true /* createEncoder */, cameraSource,
+                                                   NULL, encoder_flags);
+        if (encoder == NULL) {
+            ALOGW("Failed to create the encoder");
+            // When the encoder fails to be created, we need
+            // release the camera source due to the camera's lock
+            // and unlock mechanism.
+            cameraSource->stop();
+            return UNKNOWN_ERROR;
+        }
+
+        mVideoSourceNode = cameraSource;
+        mVideoEncoderOMX = encoder;
+
+        *source = encoder;
+    } else {
+	int width = mVideoWidth;
+	int height = mVideoHeight; 
+	sp<MetaData> enc_meta = new MetaData;
+	enc_meta->setInt32(kKeyWidth, width);
+	enc_meta->setInt32(kKeyHeight, height);
+        enc_meta->setInt32(kKeyIFramesInterval, mIFramesIntervalSec);
+	enc_meta->setInt32(kKeyStride, width);
+	enc_meta->setInt32(kKeySliceHeight, height);
+	enc_meta->setInt32(kKeyFrameRate, mFrameRate);
+	enc_meta->setInt32(kKeyBitRate, mVideoBitRate);
+        switch (mVideoEncoder) {
+        case VIDEO_ENCODER_H263:
+            enc_meta->setCString(kKeyMIMEType, MEDIA_MIMETYPE_VIDEO_H263);
+            break;
+        case VIDEO_ENCODER_MPEG_4_SP:
+            enc_meta->setCString(kKeyMIMEType, MEDIA_MIMETYPE_VIDEO_MPEG4);
+            break;
+        case VIDEO_ENCODER_H264:
+            enc_meta->setCString(kKeyMIMEType, MEDIA_MIMETYPE_VIDEO_AVC);
+            break;
+        default:
+            CHECK(!"Should not be here, unsupported video encoding.");
+            break;
+        }
+        OMXClient client;
+        CHECK_EQ(client.connect(), (status_t)OK);
+        uint32_t encoder_flags = 0;
+        if (mIsMetaDataStoredInVideoBuffers) {
+            encoder_flags |= OMXCodec::kHardwareCodecsOnly;
+            encoder_flags |= OMXCodec::kStoreMetaDataInVideoBuffers;
+        }
+        // receiving output from video encoder component.
+        if (mCaptureTimeLapse) {
+            encoder_flags |= OMXCodec::kOnlySubmitOneInputBufferAtOneTime;
+        }
+
+        sp<MediaSource> encoder = OMXCodec::Create(
+                                                   client.interface(), enc_meta,
+                                                   true /* createEncoder */, cameraSource,
+                                                   NULL, encoder_flags);
+        if (encoder == NULL) {
+            ALOGW("Failed to create the encoder");
+            // When the encoder fails to be created, we need
+            // release the camera source due to the camera's lock
+            // and unlock mechanism.
+            cameraSource->stop();
+            return UNKNOWN_ERROR;
+        }
+
+        *source = encoder;
     }
-    if (mVideoEncoderLevel != -1) {
-        enc_meta->setInt32(kKeyVideoLevel, mVideoEncoderLevel);
-    }
-
-    OMXClient client;
-    CHECK_EQ(client.connect(), (status_t)OK);
-
-    uint32_t encoder_flags = 0;
-    if (mIsMetaDataStoredInVideoBuffers) {
-        encoder_flags |= OMXCodec::kStoreMetaDataInVideoBuffers;
-    }
-
-    // Do not wait for all the input buffers to become available.
-    // This give timelapse video recording faster response in
-    // receiving output from video encoder component.
-    if (mCaptureTimeLapse) {
-        encoder_flags |= OMXCodec::kOnlySubmitOneInputBufferAtOneTime;
-    }
-    encoder_flags |= ExtendedUtils::getEncoderTypeFlags();
-
-    sp<MediaSource> encoder = OMXCodec::Create(
-            client.interface(), enc_meta,
-            true /* createEncoder */, cameraSource,
-            NULL, encoder_flags);
-    if (encoder == NULL) {
-        ALOGW("Failed to create the encoder");
-        // When the encoder fails to be created, we need
-        // release the camera source due to the camera's lock
-        // and unlock mechanism.
-        cameraSource->stop();
-        return UNKNOWN_ERROR;
-    }
-
-    mVideoSourceNode = cameraSource;
-    mVideoEncoderOMX = encoder;
-
-    *source = encoder;
-
     return OK;
 }
 
@@ -1951,7 +2168,7 @@ status_t StagefrightRecorder::reset() {
     mAudioBitRate  = 12200;
 #endif
     mInterleaveDurationUs = 0;
-    mIFramesIntervalSec = 1;
+    mIFramesIntervalSec = 3;
     mAudioSourceNode = 0;
     mUse64BitFileOffset = false;
     mMovieTimeScale  = -1;

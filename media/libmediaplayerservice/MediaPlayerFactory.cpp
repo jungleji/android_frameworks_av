@@ -32,11 +32,33 @@
 #include "nuplayer/NuPlayerDriver.h"
 #include <dlfcn.h>
 
+#include "ApePlayer.h"
+#include "FFPlayer.h"
+#include "RKBOXFFPlayer.h"
+
 namespace android {
 
 Mutex MediaPlayerFactory::sLock;
 MediaPlayerFactory::tFactoryMap MediaPlayerFactory::sFactoryMap;
 bool MediaPlayerFactory::sInitComplete = false;
+
+static status_t getFileName(int fd,String8 *FilePath)
+{
+    static ssize_t link_dest_size;
+    static char link_dest[PATH_MAX];
+    const char *ptr = NULL;
+    String8 path;
+    path.appendFormat("/proc/%d/fd/%d", getpid(), fd);
+    if ((link_dest_size = readlink(path.string(), link_dest, sizeof(link_dest)-1)) < 0) {
+        return errno;
+    } else {
+        link_dest[link_dest_size] = '\0';
+    }
+    path = link_dest;
+    ptr = path.string();
+    *FilePath = String8(ptr);
+    return OK;
+}
 
 status_t MediaPlayerFactory::registerFactory_l(IFactory* factory,
                                                player_type type) {
@@ -68,7 +90,7 @@ player_type MediaPlayerFactory::getDefaultPlayerType() {
         return NU_PLAYER;
     }
 
-    return STAGEFRIGHT_PLAYER;
+    return FF_PLAYER;
 }
 
 status_t MediaPlayerFactory::registerFactory(IFactory* factory,
@@ -85,7 +107,14 @@ void MediaPlayerFactory::unregisterFactory(player_type type) {
 #define GET_PLAYER_TYPE_IMPL(a...)                      \
     Mutex::Autolock lock_(&sLock);                      \
                                                         \
-    player_type ret = STAGEFRIGHT_PLAYER;               \
+    player_type ret = FF_PLAYER;                        \
+    char value_pro[PROPERTY_VALUE_MAX];                 \
+    if (property_get("sys.ffmpeg_sf.switch", value_pro, NULL)){         \
+        if (atoi(value_pro) > 0){                                       \
+            ret =  STAGEFRIGHT_PLAYER;                                  \
+        }                                                               \
+    }                                                   \
+                                                        \
     float bestScore = 0.0;                              \
                                                         \
     for (size_t i = 0; i < sFactoryMap.size(); ++i) {   \
@@ -101,13 +130,34 @@ void MediaPlayerFactory::unregisterFactory(player_type type) {
     }                                                   \
                                                         \
     if (0.0 == bestScore) {                             \
-        ret = getDefaultPlayerType();                   \
+        bestScore = getDefaultPlayerType();             \
     }                                                   \
                                                         \
     return ret;
 
 player_type MediaPlayerFactory::getPlayerType(const sp<IMediaPlayer>& client,
                                               const char* url) {
+    if (!strncasecmp("iptv://", url, 7)) {
+        return STAGEFRIGHT_PLAYER;
+    }
+
+    if (!strncasecmp("udpwimo", url, 7)) {
+        return STAGEFRIGHT_PLAYER;
+    }
+
+    if (!strncasecmp("DVBTV://", url, 8)) {
+        return STAGEFRIGHT_PLAYER;
+    }
+
+    //add by xhr, in order for camere can run sf.
+    if(strstr(url,".ogg")){
+        return STAGEFRIGHT_PLAYER;
+    }
+
+    if(strstr(url,".wvm")){
+        return STAGEFRIGHT_PLAYER;
+    }
+
     GET_PLAYER_TYPE_IMPL(client, url);
 }
 
@@ -115,12 +165,31 @@ player_type MediaPlayerFactory::getPlayerType(const sp<IMediaPlayer>& client,
                                               int fd,
                                               int64_t offset,
                                               int64_t length) {
+    String8 filePath;
+    getFileName(fd,&filePath);
+    filePath.toLower();
+    ALOGE("getPlayerType(), fd = %d, path = %s",fd,filePath.string());
+    if(strstr(filePath.string(),".apk"))
+    {
+        ALOGD("FILE:(%s) get STAGEFRIGHT_PLAYER",filePath.string());
+        return STAGEFRIGHT_PLAYER;
+    }
+
+    //add by xhr, in order for camere can run sf.
+    if(strstr(filePath.string(),".ogg")){
+        return STAGEFRIGHT_PLAYER;
+    }
+
+    if(strstr(filePath.string(),".wvm")){
+        return STAGEFRIGHT_PLAYER;
+    }
+
     GET_PLAYER_TYPE_IMPL(client, fd, offset, length);
 }
 
 player_type MediaPlayerFactory::getPlayerType(const sp<IMediaPlayer>& client,
                                               const sp<IStreamSource> &source) {
-    GET_PLAYER_TYPE_IMPL(client, source);
+    return NU_PLAYER;
 }
 
 #undef GET_PLAYER_TYPE_IMPL
@@ -201,31 +270,10 @@ class NuPlayerFactory : public MediaPlayerFactory::IFactory {
     virtual float scoreFactory(const sp<IMediaPlayer>& client,
                                const char* url,
                                float curScore) {
-        static const float kOurScore = 0.8;
+        static const float kOurScore = 0.0;
 
         if (kOurScore <= curScore)
             return 0.0;
-
-        if (!strncasecmp("http://", url, 7)
-                || !strncasecmp("https://", url, 8)
-                || !strncasecmp("file://", url, 7)) {
-            size_t len = strlen(url);
-            if (len >= 5 && !strcasecmp(".m3u8", &url[len - 5])) {
-                return kOurScore;
-            }
-
-            if (strstr(url,"m3u8")) {
-                return kOurScore;
-            }
-
-            if ((len >= 4 && !strcasecmp(".sdp", &url[len - 4])) || strstr(url, ".sdp?")) {
-                return kOurScore;
-            }
-        }
-
-        if (!strncasecmp("rtsp://", url, 7)) {
-            return kOurScore;
-        }
 
         return 0.0;
     }
@@ -329,6 +377,101 @@ class TestPlayerFactory : public MediaPlayerFactory::IFactory {
     }
 };
 
+class ApePlayerFactory :
+    public MediaPlayerFactory::IFactory {
+  public:
+    virtual float scoreFactory(const sp<IMediaPlayer>& client,
+                               int fd,
+                               int64_t offset,
+                               int64_t length,
+                               float curScore) {
+        ALOGV("-->ape factory in");
+        char buf[20];
+        lseek(fd, offset, SEEK_SET);
+        read(fd, buf, sizeof(buf));
+        lseek(fd, offset, SEEK_SET);
+		if(!memcmp("ID3", buf, 3))
+		{
+			size_t len =
+					((buf[6] & 0x7f) << 21)
+					| ((buf[7] & 0x7f) << 14)
+					| ((buf[8] & 0x7f) << 7)
+					| (buf[9] & 0x7f);
+			len += 10;
+			lseek(fd, offset+len, SEEK_SET);
+			read(fd, buf, sizeof(buf));
+			lseek(fd, offset, SEEK_SET);
+		}
+		long ident = *((long*)buf);
+		if (ident == 0x2043414D)
+		{
+			ALOGV("it is ape file");
+			return 1.0;
+		}
+		ALOGV("it is not a ape file");
+        return 0.0;
+    }
+    virtual sp<MediaPlayerBase> createPlayer() {
+        ALOGI(" create ApePlayer");
+        return new ApePlayer();
+    }
+};
+
+class FFPlayerFactory :
+    public MediaPlayerFactory::IFactory {
+
+ public:
+    virtual float scoreFactory(const sp<IMediaPlayer>& client,
+                                       const char* url,
+                                       float curScore){
+        static const float kOurScore = 0.9;
+        if (!strncasecmp("http://", url, 7)
+                || !strncasecmp("https://", url, 8)
+                || !strncasecmp("rtsp://", url, 7)){
+            char value[PROPERTY_VALUE_MAX];
+            if((property_get("sys.cts_gts.status", value, NULL))
+                &&(strstr(value, "true"))){
+                return 0.0;
+            }
+            return kOurScore;
+        }
+        return 0.0;
+    }
+    virtual sp<MediaPlayerBase> createPlayer() {
+        ALOGI(" create FFPlayer");
+        return new FFPlayer();
+    }
+
+};
+class RKBOXFFPlayerFactory :
+        public MediaPlayerFactory::IFactory {
+public:
+    virtual float scoreFactory(const sp<IMediaPlayer>& client,
+                               int fd,
+                               int64_t offset,
+                               int64_t length,
+                               float curScore) {
+        String8 filePath;
+        getFileName(fd,&filePath);
+        filePath.toLower();
+
+        char value[PROPERTY_VALUE_MAX];
+        if (property_get("video.support.bluray", value, "no") && (strcmp("yes", value) == 0))
+        {
+            if(strstr(filePath.string(),".iso"))
+            {
+                return 1.0;
+            }
+        }
+        return 0.0;
+    }
+
+    virtual sp<MediaPlayerBase> createPlayer() {
+        ALOGI(" create RKBOXFFPlayer");
+        return new RKBOXFFPlayer();
+    }
+};
+
 void MediaPlayerFactory::registerBuiltinFactories() {
     Mutex::Autolock lock_(&sLock);
 
@@ -339,6 +482,9 @@ void MediaPlayerFactory::registerBuiltinFactories() {
     registerFactory_l(new NuPlayerFactory(), NU_PLAYER);
     registerFactory_l(new SonivoxPlayerFactory(), SONIVOX_PLAYER);
     registerFactory_l(new TestPlayerFactory(), TEST_PLAYER);
+    registerFactory_l(new ApePlayerFactory(),APE_PLAYER);
+    registerFactory_l(new FFPlayerFactory(),FF_PLAYER);
+    registerFactory_l(new RKBOXFFPlayerFactory(),RKBOXFF_PLAYER);
 
     const char* FACTORY_LIB           = "libdashplayer.so";
     const char* FACTORY_CREATE_FN     = "CreateDASHFactory";

@@ -40,6 +40,7 @@ enum video_source {
     VIDEO_SOURCE_DEFAULT = 0,
     VIDEO_SOURCE_CAMERA = 1,
     VIDEO_SOURCE_GRALLOC_BUFFER = 2,
+    VIDEO_SOURCE_UI = 3,
 
     VIDEO_SOURCE_LIST_END  // must be last - used to validate audio source type
 };
@@ -66,11 +67,12 @@ enum output_format {
 
     /* H.264/AAC data encapsulated in MPEG2/TS */
     OUTPUT_FORMAT_MPEG2TS = 8,
+    OUTPUT_FORMAT_MIRRORINGTS = 9,
 
 #ifdef QCOM_HARDWARE
-    OUTPUT_FORMAT_QCP = 9, // QCP file format
-    OUTPUT_FORMAT_THREE_GPP2 = 10, /*3GPP2*/
-    OUTPUT_FORMAT_WAVE = 11, /*WAVE*/
+    OUTPUT_FORMAT_QCP = 10, // QCP file format
+    OUTPUT_FORMAT_THREE_GPP2 = 11, /*3GPP2*/
+    OUTPUT_FORMAT_WAVE = 12, /*WAVE*/
 #endif
     OUTPUT_FORMAT_LIST_END // must be last - used to validate format type
 };

@@ -300,7 +300,9 @@ sp<IDrm> MediaPlayerService::makeDrm() {
 }
 
 sp<IHDCP> MediaPlayerService::makeHDCP(bool createEncryptionModule) {
-    return new HDCP(createEncryptionModule);
+    if (mHDCP == NULL)
+        mHDCP = new HDCP(createEncryptionModule);
+    return mHDCP;
 }
 
 sp<IRemoteDisplay> MediaPlayerService::listenForRemoteDisplay(
@@ -658,6 +660,11 @@ status_t MediaPlayerService::Client::setDataSource(
         return mStatus;
     } else {
         player_type playerType = MediaPlayerFactory::getPlayerType(this, url);
+
+        if (playerType == NO_PLAYER) {
+            return NO_INIT;
+        }
+
         sp<MediaPlayerBase> p = setDataSource_pre(playerType);
         if (p == NULL) {
             return NO_INIT;
@@ -698,6 +705,10 @@ status_t MediaPlayerService::Client::setDataSource(int fd, int64_t offset, int64
                                                                fd,
                                                                offset,
                                                                length);
+    if (playerType == NO_PLAYER) {
+        return NO_INIT;
+    }
+
     sp<MediaPlayerBase> p = setDataSource_pre(playerType);
     if (p == NULL) {
         return NO_INIT;
@@ -791,6 +802,23 @@ status_t MediaPlayerService::Client::invoke(const Parcel& request,
     sp<MediaPlayerBase> p = getPlayer();
     if (p == NULL) return UNKNOWN_ERROR;
     return p->invoke(request, reply);
+}
+
+status_t MediaPlayerService::Client::isBluray()
+{
+    ALOGV("MediaPlayerService: isBluray");
+    sp<MediaPlayerBase> p = getPlayer();
+    if (p == NULL)
+    {
+        return 1;
+    }
+    ALOGV("MediaPlayerService: p->playerType = %d",p->playerType());
+    if(p->playerType() == RKBOXFF_PLAYER)
+    {
+        return 0;
+    }
+
+    return 1;
 }
 
 // This call doesn't need to access the native player.
@@ -1567,6 +1595,11 @@ status_t MediaPlayerService::AudioOutput::open(
         }
         if (AudioSystem::getOutputSamplingRate(&afSampleRate, mStreamType) != NO_ERROR) {
             return NO_INIT;
+        }
+
+        if (AUDIO_OUTPUT_FLAG_DIRECT == flags) {
+            ALOGD("AUDIO_OUTPUT_FLAG_DIRECT, afSampleRate need equal to source sampleRate: %d\n", sampleRate);
+            afSampleRate = sampleRate;
         }
 
         frameCount = (sampleRate*afFrameCount*bufferCount)/afSampleRate;
