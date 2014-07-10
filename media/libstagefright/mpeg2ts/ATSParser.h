@@ -48,6 +48,8 @@ struct ATSParser : public RefBase {
             DISCONTINUITY_AUDIO_FORMAT
                 | DISCONTINUITY_VIDEO_FORMAT
                 | DISCONTINUITY_TIME,
+
+        DISCONTINUITY_PLUSTIME          = 32,
     };
 
     enum Flags {
@@ -62,22 +64,29 @@ struct ATSParser : public RefBase {
     };
 
     ATSParser(uint32_t flags = 0);
+    void set_player_type(int type);
 
+    status_t feedTSPacket(const void *data, size_t size,uint32_t seekflag);
     status_t feedTSPacket(const void *data, size_t size);
 
     void signalDiscontinuity(
             DiscontinuityType type, const sp<AMessage> &extra);
 
     void signalEOS(status_t finalResult);
-
+    void signalSeek();
+    void createLiveProgramID(unsigned AudioPID,unsigned AudioType,unsigned VideoPID,unsigned VideoType);
     enum SourceType {
         VIDEO = 0,
         AUDIO = 1,
         NUM_SOURCE_TYPES = 2
     };
+    sp<MediaSource> getSource(SourceType type,uint32_t& ProgramID,unsigned& elementaryPID);
     sp<MediaSource> getSource(SourceType type);
 
+    int64_t getTimeus(uint32_t ProgramID,unsigned elementaryPID);
+    void Start(unsigned AudioPID,unsigned VideoPID);
     bool PTSTimeDeltaEstablished();
+    Vector<int32_t> mPIDbuffer;
 
     enum {
         // From ISO/IEC 13818-1: 2000 (E), Table 2-29
@@ -88,10 +97,16 @@ struct ATSParser : public RefBase {
         STREAMTYPE_MPEG2_AUDIO          = 0x04,
         STREAMTYPE_MPEG2_AUDIO_ADTS     = 0x0f,
         STREAMTYPE_MPEG4_VIDEO          = 0x10,
+        STREAMTYPE_MPEG2_AUDIO_LATM     = 0x11,
         STREAMTYPE_H264                 = 0x1b,
         // From Dolby AC3 A52b specification
         STREAMTYPE_AC3_AUDIO            = 0x81,
         STREAMTYPE_PCM_AUDIO            = 0x83,
+        STREAMTYPE_AC3                  = 0x81,
+        STREAMTYPE_DTS                  = 0x7b,
+        STREAMTYPE_DTS1                 = 0x82,
+        STREAMTYPE_DTS2                 = 0x8a,
+        STREAMTYPE_VC1                  = 0xea
     };
 
 protected:
@@ -103,6 +118,9 @@ private:
     struct PSISection;
 
     uint32_t mFlags;
+#ifdef TS_DEBUG
+    FILE * fp;
+#endif
     Vector<sp<Program> > mPrograms;
 
     // Keyed by PID
@@ -118,6 +136,13 @@ private:
     void parseProgramAssociationTable(ABitReader *br);
     void parseProgramMap(ABitReader *br);
     void parsePES(ABitReader *br);
+
+    size_t   kTSPacketSize;
+    uint32_t seekFlag;
+    unsigned mAudioPID;
+    unsigned mVideoPID;
+    bool     playStart;
+    int      player_type;
 
     status_t parsePID(
         ABitReader *br, unsigned PID,

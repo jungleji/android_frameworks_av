@@ -52,6 +52,18 @@ static uint64_t U64_AT(const uint8_t *ptr) {
 static const size_t kMaxUDPSize = 1500;
 static const int32_t kMaxUDPRetries = 200;
 
+static long long net_start_time = 0;
+static long long net_start_data_time = 0;
+static long long start_time_us = 0;
+static long long audio_start_time_us = 0;
+
+int64_t last_time_a;
+int64_t last_time_v;
+
+FILE* omx_txt = NULL;
+FILE* omx_rs_txt =NULL;
+FILE* rtp_ts = NULL;
+
 struct ANetworkSession::NetworkThread : public Thread {
     NetworkThread(ANetworkSession *session);
 
@@ -100,6 +112,8 @@ struct ANetworkSession::Session : public RefBase {
     status_t writeMore();
 
     status_t sendRequest(
+            const void *data, ssize_t size, bool timeValid, int64_t timeUs);
+    status_t sendTsPacket(
             const void *data, ssize_t size, bool timeValid, int64_t timeUs);
 
     void setMode(Mode mode);
@@ -267,8 +281,6 @@ bool ANetworkSession::Session::wantsToWrite() {
 
 status_t ANetworkSession::Session::readMore() {
     if (mState == DATAGRAM) {
-        CHECK_EQ(mMode, MODE_DATAGRAM);
-
         status_t err;
         do {
             sp<ABuffer> buf = new ABuffer(kMaxUDPSize);
@@ -276,7 +288,14 @@ status_t ANetworkSession::Session::readMore() {
             struct sockaddr_in remoteAddr;
             socklen_t remoteAddrLen = sizeof(remoteAddr);
 
+            if (net_start_time == 0) {
+                long long curtime;
+                curtime = systemTime(SYSTEM_TIME_MONOTONIC) / 1000;
+                net_start_time = curtime;
+            }
+
             ssize_t n;
+
             do {
                 n = recvfrom(
                         mSocket, buf->data(), buf->capacity(), 0,
@@ -557,6 +576,126 @@ status_t ANetworkSession::Session::writeMore() {
             const Fragment &frag = *mOutFragments.begin();
             const sp<ABuffer> &datagram = frag.mBuffer;
 
+            unsigned char* buff = (unsigned char*)datagram->data();
+            int len = datagram->size();
+            int i ;
+
+            int64_t last_time_a = 0 ;
+            int64_t last_time_v = 0;
+            static long long net_start_time = 0;
+            static long long net_start_data_time = 0;
+            static long long start_time_us = 0;
+            static long long audio_start_time_us = 0;
+            int	normal_sign = 1;
+
+            for(i = 0; i < len-30; i++) {
+                int padding_len = ((buff[i+3] & 0x30) == 0x30)? (buff[i+4] + 1): 0;
+
+                if(padding_len > len -i -30)
+                    padding_len = len-i -30;
+
+                if(buff[i] == 0x47 && ((buff[i+1]&0x40) ) &&((buff[i+3] & 0x10) == 0x10)&&
+                   buff[i + padding_len + 4] == 0x0&& buff[i + padding_len + 5] == 0x0 && buff[i + padding_len + 6] == 0x1) {
+                    if(buff[i] == 0x47 && buff[i+1] == 0x50 && buff[i+2] == 0x11 && (((buff[i+3] >> 4) & 0x03) == 0x01)) {
+                        uint64_t PTS;
+                        long long timeUs1;
+                        long long curtime[2];
+
+                        normal_sign = 0;
+                        curtime[0] = systemTime(SYSTEM_TIME_MONOTONIC) / 1000;
+                        PTS = (((uint64_t)buff[i+13] ) & 0xe) <<29;
+                        PTS |= buff[i+14] <<22;
+                        PTS |= (buff[i+15] & 0xfe) <<14;
+                        PTS |= (buff[i+16] ) <<7;
+                        PTS |= (buff[i+17] >>1);
+                        curtime[1] = (long long)(PTS) * 100 /9;
+
+                        int retrtptxt;
+                        if((retrtptxt = access("data/test/omx_txt_file",0)) == 0) {//test_file!=NULL)
+                            if(omx_txt == NULL)
+                                omx_txt = fopen("data/test/omx_txt.txt","ab");
+
+                            if(omx_txt != NULL) {
+				fprintf(omx_txt,"WriteMore video start1 time %15lld  %15lld cur_Time %15lld   %15lld delta sys %15lld %15lld %15lld  %15lld mOutDatagrams size %d PTS %d %2x%2x%2x%2x%2x   data %2x%2x%2x%2x%2x%2x%2x%2x%2x%2x%2x%2x\n",
+                                        start_time_us,audio_start_time_us,curtime[0],curtime[1],
+                                        curtime[0] - start_time_us ,curtime[1] - audio_start_time_us,
+                                        curtime[0] - start_time_us - curtime[1] + audio_start_time_us,curtime[1] - last_time_a,
+                                        mOutFragments.size(),
+                                        PTS,buff[i+13],buff[i+14],buff[i+15],buff[i+16],buff[i+17],
+                                        buff[i+18],buff[i+19],buff[i+20],buff[i+21],
+                                        buff[i+22],buff[i+23],buff[i+24],buff[i+25],buff[i+26],buff[i+27],buff[i+28],buff[i+29]);
+				fflush(omx_txt);
+                                last_time_a = curtime[1];
+                            }
+
+                            ALOGV("WriteMore video start time %lld  %lld cur_Time %lld   %lld delta sys %lld %lld %lld   PTS %d %2x%2x%2x%2x%2x   data %2x%2x%2x%2x%2x%2x%2x%2x%2x%2x%2x%2x\n",
+                                  start_time_us,audio_start_time_us,curtime[0],curtime[1],
+                                  curtime[0] - start_time_us ,curtime[1] - audio_start_time_us,
+                                  curtime[0] - start_time_us - curtime[1] + audio_start_time_us,
+                                  PTS,buff[i+13],buff[i+14],buff[i+15],buff[i+16],buff[i+17],
+                                  buff[i+18],buff[i+19],buff[i+20],buff[i+21],
+                                  buff[i+22],buff[i+23],buff[i+24],buff[i+25],buff[i+26],buff[i+27],buff[i+28],buff[i+29]);
+                        }
+                    } else if(buff[i] == 0x47 && buff[i+1] == 0x51 && buff[i+2] == 0x00 && (((buff[i+3] >> 4) & 0x03) == 0x01)) {
+                        uint64_t	   PTS;
+                        long long timeUs1;
+                        long long curtime[2];
+                        normal_sign = 0;
+                        curtime[0] = systemTime(SYSTEM_TIME_MONOTONIC) / 1000;
+                        PTS = (((uint64_t)buff[i+13] ) & 0xe) <<29;
+                        PTS |= buff[i+14] <<22;
+                        PTS |= (buff[i+15] & 0xfe) <<14;
+                        PTS |= (buff[i+16] ) <<7;
+                        PTS |= (buff[i+17] >>1);
+                        curtime[1] = (long long)(PTS) * 100 /9;
+                        if(start_time_us == 0)
+                            start_time_us = curtime[0];
+                        if(audio_start_time_us == 0)
+                            audio_start_time_us  = curtime[1];
+
+                        if(start_time_us >curtime[0] - (curtime[1] - audio_start_time_us) )
+                            start_time_us = curtime[0] - (curtime[1] - audio_start_time_us);
+
+                        int retrtptxt;
+                        if((retrtptxt = access("data/test/omx_txt_file",0)) == 0) {//test_file!=NULL)
+                            if(omx_txt == NULL)
+                                omx_txt = fopen("data/test/omx_txt.txt","ab");
+
+                            if(omx_txt != NULL) {
+                                fprintf(omx_txt,"WriteMore Audio start time %15lld  %15lld cur_Time %15lld   %15lld delta sys %15lld %15lld %15lld  %15lld mOutDatagrams size %d PTS %d %2x%2x%2x%2x%2x   data %2x%2x%2x%2x%2x%2x%2x%2x%2x%2x%2x%2x\n",
+                                        start_time_us,audio_start_time_us,curtime[0],curtime[1],
+                                        curtime[0] - start_time_us , curtime[0] - curtime[1],
+                                        curtime[0] - start_time_us - curtime[1] + audio_start_time_us,curtime[1] - last_time_v,
+                                        mOutFragments.size(),
+                                        PTS,buff[i+13],buff[i+14],buff[i+15],buff[i+16],buff[i+17],
+                                        buff[i+18],buff[i+19],buff[i+20],buff[i+21],
+                                        buff[i+22],buff[i+23],buff[i+24],buff[i+25],buff[i+26],buff[i+27],buff[i+28],buff[i+29]);
+                                fflush(omx_txt);
+                                last_time_v = curtime[1];
+                            }
+                        }
+                    }
+                }
+            }
+
+            uint8_t *data = datagram->data();
+            if (data[0] == 0x80 && (data[1] & 0x7f) == 33) {
+                int64_t nowUs = ALooper::GetNowUs();
+
+                uint32_t prevRtpTime = U32_AT(&data[4]);
+
+                // 90kHz time scale
+                uint32_t rtpTime = (nowUs * 9ll) / 100ll;
+                int32_t diffTime = (int32_t)rtpTime - (int32_t)prevRtpTime;
+
+                ALOGV("correcting rtpTime by %.0f ms", diffTime / 90.0);
+
+                data[4] = rtpTime >> 24;
+                data[5] = (rtpTime >> 16) & 0xff;
+                data[6] = (rtpTime >> 8) & 0xff;
+                data[7] = rtpTime & 0xff;
+            }
+
             int n;
             do {
                 n = send(mSocket, datagram->data(), datagram->size(), 0);
@@ -688,6 +827,98 @@ status_t ANetworkSession::Session::writeMore() {
     return err;
 }
 
+status_t ANetworkSession::Session::sendTsPacket(
+        const void *data, ssize_t size, bool timeValid, int64_t timeUs) {
+    CHECK(mState == CONNECTED || mState == DATAGRAM);
+
+    if (size < 0) {
+        size = strlen((const char *)data);
+    }
+
+    if (size == 0) {
+        return OK;
+    }
+
+    sp<ABuffer> buffer;
+
+    if (mState == CONNECTED && mMode == MODE_DATAGRAM) {
+        CHECK_LE(size, 65535);
+
+        buffer = new ABuffer(size + 2);
+        buffer->data()[0] = size >> 8;
+        buffer->data()[1] = size & 0xff;
+        memcpy(buffer->data() + 2, data, size);
+        ALOGV("mState 1 %d mMode %d",mState,mMode);
+    }
+    else if (mState == CONNECTED && mMode == MODE_WEBSOCKET) {
+        static const bool kUseMask = false;  // Chromium doesn't like it.
+
+        size_t numHeaderBytes = 2 + (kUseMask ? 4 : 0);
+        if (size > 65535) {
+            numHeaderBytes += 8;
+        } else if (size > 125) {
+            numHeaderBytes += 2;
+        }
+
+        buffer = new ABuffer(numHeaderBytes + size);
+        buffer->data()[0] = 0x81;  // FIN==1 | opcode=1 (text)
+        buffer->data()[1] = kUseMask ? 0x80 : 0x00;
+
+        if (size > 65535) {
+            buffer->data()[1] |= 127;
+            buffer->data()[2] = 0x00;
+            buffer->data()[3] = 0x00;
+            buffer->data()[4] = 0x00;
+            buffer->data()[5] = 0x00;
+            buffer->data()[6] = (size >> 24) & 0xff;
+            buffer->data()[7] = (size >> 16) & 0xff;
+            buffer->data()[8] = (size >> 8) & 0xff;
+            buffer->data()[9] = size & 0xff;
+        } else if (size > 125) {
+            buffer->data()[1] |= 126;
+            buffer->data()[2] = (size >> 8) & 0xff;
+            buffer->data()[3] = size & 0xff;
+        } else {
+            buffer->data()[1] |= size;
+        }
+
+        if (kUseMask) {
+            uint32_t mask = rand();
+
+            buffer->data()[numHeaderBytes - 4] = (mask >> 24) & 0xff;
+            buffer->data()[numHeaderBytes - 3] = (mask >> 16) & 0xff;
+            buffer->data()[numHeaderBytes - 2] = (mask >> 8) & 0xff;
+            buffer->data()[numHeaderBytes - 1] = mask & 0xff;
+
+            for (size_t i = 0; i < (size_t)size; ++i) {
+                buffer->data()[numHeaderBytes + i] =
+                    ((const uint8_t *)data)[i]
+                        ^ ((mask >> (8 * (3 - (i % 4)))) & 0xff);
+            }
+        } else {
+            memcpy(buffer->data() + numHeaderBytes, data, size);
+        }
+        ALOGV("mState 2 %d mMode %d",mState,mMode);
+    } else {
+        buffer = new ABuffer(size);
+        memcpy(buffer->data(), data, size);
+        ALOGV("mState 3 %d mMode %d",mState,mMode);
+    }
+    Fragment frag;
+
+    frag.mFlags = 0;
+    if (timeValid) {
+        frag.mFlags = FRAGMENT_FLAG_TIME_VALID;
+        frag.mTimeUs = timeUs;
+    }
+
+    frag.mBuffer = buffer;
+
+    mOutFragments.push_back(frag);
+
+    return OK;
+}
+
 status_t ANetworkSession::Session::sendRequest(
         const void *data, ssize_t size, bool timeValid, int64_t timeUs) {
     CHECK(mState == CONNECTED || mState == DATAGRAM);
@@ -800,6 +1031,10 @@ void ANetworkSession::Session::notify(NotificationReason reason) {
 ANetworkSession::ANetworkSession()
     : mNextSessionID(1) {
     mPipeFd[0] = mPipeFd[1] = -1;
+    net_start_time = 0;
+    net_start_data_time = 0;
+    start_time_us = 0;
+    audio_start_time_us = 0;
 }
 
 ANetworkSession::~ANetworkSession() {
@@ -985,7 +1220,9 @@ status_t ANetworkSession::createClientOrServer(
     }
 
     if (mode == kModeCreateRTSPServer
-            || mode == kModeCreateTCPDatagramSessionPassive) {
+        || mode == kModeCreateTCPDatagramSessionPassive
+        || mode == kModeCreateUDPSession
+        ){
         const int yes = 1;
         res = setsockopt(s, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes));
 
@@ -1049,7 +1286,7 @@ status_t ANetworkSession::createClientOrServer(
 
         addr.sin_addr.s_addr = *(in_addr_t *)ent->h_addr;
         addr.sin_port = htons(remotePort);
-    } else if (localAddr != NULL) {
+    } else if (localAddr != NULL && (mode != kModeCreateRTSPServer)) {
         addr.sin_addr = *localAddr;
         addr.sin_port = htons(port);
     } else {
@@ -1222,6 +1459,25 @@ status_t ANetworkSession::sendRequest(
     return err;
 }
 
+status_t ANetworkSession::sendTsPacket(
+        int32_t sessionID, const void *data, ssize_t size,
+        bool timeValid, int64_t timeUs) {
+    Mutex::Autolock autoLock(mLock);
+
+    ssize_t index = mSessions.indexOfKey(sessionID);
+
+    if (index < 0) {
+        return -ENOENT;
+    }
+
+    const sp<Session> session = mSessions.valueAt(index);
+
+    status_t err = session->sendTsPacket(data, size, timeValid, timeUs);
+
+  //  interrupt();
+
+    return err;
+}
 status_t ANetworkSession::switchToWebSocketMode(int32_t sessionID) {
     Mutex::Autolock autoLock(mLock);
 

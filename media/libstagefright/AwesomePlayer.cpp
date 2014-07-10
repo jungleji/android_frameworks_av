@@ -3000,6 +3000,11 @@ void AwesomePlayer::onPrepareAsyncEvent() {
     beginPrepareAsync_l();
 }
 
+int64_t AwesomePlayer::onDisplayEvent()
+{
+    return 0;
+}
+
 void AwesomePlayer::beginPrepareAsync_l() {
     if (mFlags & PREPARE_CANCELLED) {
         ALOGI("prepare was cancelled before doing anything");

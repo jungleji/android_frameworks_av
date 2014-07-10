@@ -29,6 +29,8 @@
 #include <ui/GraphicBuffer.h>
 #include <sys/atomics.h>
 
+#include "vpu_global.h"
+
 namespace android {
 
 MediaBuffer::MediaBuffer(void *data, size_t size)
@@ -102,6 +104,19 @@ void MediaBuffer::release() {
         mObserver->signalBufferReturned(this);
     }
     CHECK(prevCount > 0);
+}
+
+void MediaBuffer::releaseframe() {
+#ifndef FRAME_COPY
+    if (mGraphicBuffer == NULL) {
+        VPU_FRAME *frame = (VPU_FRAME*)mData;
+        if (frame->vpumem.phy_addr) {
+            VPUMemLink(&frame->vpumem);
+            VPUFreeLinear(&frame->vpumem);
+        }
+    }
+#endif
+    release();
 }
 
 void MediaBuffer::claim() {

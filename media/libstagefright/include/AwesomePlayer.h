@@ -43,6 +43,9 @@ struct MediaExtractor;
 struct MediaSource;
 struct NuCachedSource2;
 struct IGraphicBufferProducer;
+struct ALooper;
+struct FrameQueueManage;
+struct FrameQueue;
 
 class DrmManagerClinet;
 class DecryptHandle;
@@ -111,6 +114,9 @@ struct AwesomePlayer {
 
     status_t suspend();
     status_t resume();
+
+    int64_t onDisplayEvent();
+    FrameQueueManage *pfrmanager;
 
 private:
     friend struct AwesomeEvent;
@@ -201,6 +207,8 @@ private:
     int64_t mTimeSourceDeltaUs;
     int64_t mVideoTimeUs;
 
+    String8 filePath;
+
     enum SeekType {
         NO_SEEK,
         SEEK,
@@ -212,6 +220,7 @@ private:
     int64_t mSeekTimeUs;
 
     int64_t mBitrate;  // total bitrate of the file (in bps) or -1 if unknown.
+    int64_t started_realtime;
 
     bool mWatchForAudioSeekComplete;
     bool mWatchForAudioEOS;
@@ -264,6 +273,8 @@ private:
     sp<WVMExtractor> mWVMExtractor;
     sp<MediaExtractor> mExtractor;
 
+    String8 mMime;
+
     status_t setDataSource_l(
             const char *uri,
             const KeyedVector<String8, String8> *headers = NULL);
@@ -284,7 +295,7 @@ private:
 
 
     void setVideoSource(sp<MediaSource> source);
-    status_t initVideoDecoder(uint32_t flags = 0);
+    status_t initVideoDecoder(uint32_t flags = 1);
 
     void addTextSource_l(size_t trackIndex, const sp<MediaSource>& source);
 
@@ -404,6 +415,10 @@ private:
 
     size_t countTracks() const;
     bool isWidevineContent() const;
+    int64_t preMediaTimeus;
+    int64_t mPreSeekTimeUs;
+    int64_t mPreSeekSysTimeUs;
+    uint32_t Resver[44];
 
 #ifdef QCOM_DIRECTTRACK
     bool inSupportedTunnelFormats(const char * mime);

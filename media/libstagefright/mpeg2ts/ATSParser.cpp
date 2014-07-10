@@ -927,11 +927,24 @@ ATSParser::ATSParser(uint32_t flags)
 ATSParser::~ATSParser() {
 }
 
+void ATSParser::set_player_type(int type){
+    player_type = type;
+    return;
+}
+
 status_t ATSParser::feedTSPacket(const void *data, size_t size) {
     CHECK_EQ(size, kTSPacketSize);
 
     ABitReader br((const uint8_t *)data, kTSPacketSize);
     return parseTS(&br);
+}
+
+status_t ATSParser::feedTSPacket(const void *data, size_t size,uint32_t seekflag) {
+    return OK;
+}
+
+void ATSParser::createLiveProgramID(unsigned AudioPID,unsigned AudioType,unsigned VideoPID,unsigned VideoType)
+{
 }
 
 void ATSParser::signalDiscontinuity(
@@ -969,6 +982,9 @@ void ATSParser::signalEOS(status_t finalResult) {
     for (size_t i = 0; i < mPrograms.size(); ++i) {
         mPrograms.editItemAt(i)->signalEOS(finalResult);
     }
+}
+
+void ATSParser::signalSeek() {
 }
 
 void ATSParser::parseProgramAssociationTable(ABitReader *br) {
@@ -1233,6 +1249,17 @@ sp<MediaSource> ATSParser::getSource(SourceType type) {
     }
 
     return NULL;
+}
+
+sp<MediaSource> ATSParser::getSource(SourceType type,uint32_t& ProgramID,unsigned& elementaryPID) {
+    return NULL;
+}
+
+int64_t ATSParser::getTimeus(uint32_t ProgramID,unsigned elementaryPID) {
+    return 0;
+}
+
+void ATSParser::Start(unsigned AudioPID,unsigned VideoPID) {
 }
 
 bool ATSParser::PTSTimeDeltaEstablished() {

@@ -32,40 +32,6 @@ namespace android {
 
 struct AMessage;
 class String8;
-class DataSource;
-
-class Sniffer : public RefBase {
-public:
-    Sniffer();
-
-    ////////////////////////////////////////////////////////////////////////////
-
-    bool sniff(DataSource *source, String8 *mimeType, float *confidence, sp<AMessage> *meta);
-
-    // The sniffer can optionally fill in "meta" with an AMessage containing
-    // a dictionary of values that helps the corresponding extractor initialize
-    // its state without duplicating effort already exerted by the sniffer.
-    typedef bool (*SnifferFunc)(
-            const sp<DataSource> &source, String8 *mimeType,
-            float *confidence, sp<AMessage> *meta);
-
-    //if isExtendedExtractor = true, store the location of the sniffer to register
-    void registerSniffer_l(SnifferFunc func);
-    void registerDefaultSniffers();
-
-    virtual ~Sniffer() {}
-
-private:
-    Mutex mSnifferMutex;
-    List<SnifferFunc> mSniffers;
-    List<SnifferFunc> mExtraSniffers;
-    List<SnifferFunc>::iterator extendedSnifferPosition;
-
-    void registerSnifferPlugin();
-
-    Sniffer(const Sniffer &);
-    Sniffer &operator=(const Sniffer &);
-};
 
 class DataSource : public RefBase {
 public:
@@ -81,7 +47,7 @@ public:
             const char *uri,
             const KeyedVector<String8, String8> *headers = NULL);
 
-    DataSource() { mSniffer = new Sniffer(); }
+    DataSource() {}
 
     virtual status_t initCheck() const = 0;
 
@@ -92,6 +58,10 @@ public:
     bool getUInt24(off64_t offset, uint32_t *x); // 3 byte int, returned as a 32-bit int
     bool getUInt32(off64_t offset, uint32_t *x);
     bool getUInt64(off64_t offset, uint64_t *x);
+
+    virtual void updatecache(off64_t offset){
+        return;
+    }
 
     // May return ERROR_UNSUPPORTED.
     virtual status_t getSize(off64_t *size);
@@ -128,11 +98,15 @@ public:
     }
 
     virtual String8 getMIMEType() const;
+    virtual void setDrmPreviewMode() {};
 
 protected:
     virtual ~DataSource() {}
 
-    sp<Sniffer> mSniffer;
+private:
+    static Mutex gSnifferMutex;
+    static List<SnifferFunc> gSniffers;
+    static bool gSniffersRegistered;
 
     static void RegisterSniffer_l(SnifferFunc func);
 

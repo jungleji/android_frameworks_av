@@ -43,7 +43,22 @@ struct AnotherPacketSource : public MediaSource {
 
     void clear();
 
+    uint32_t quen_memUsed;
+    uint32_t quen_num;
+
+    bool mVideoFlag;
+    bool mIsAudio;
+    bool discontinuityFlag;
+    int32_t mType;
+    uint32_t mProgramID;
+    unsigned mElementaryPID;
+    uint64_t lastTimestamp;
+    bool IsAbufferFlag;
+
     bool hasBufferAvailable(status_t *finalResult);
+    uint32_t numBufferAvailable(int32_t *mUseMem = NULL);
+    int64_t getCurrentPackTime();
+    void setLastTime(uint64_t timeus);
 
     // Returns the difference between the last and the first queued
     // presentation timestamps since the last discontinuity (if any).
@@ -52,6 +67,7 @@ struct AnotherPacketSource : public MediaSource {
     status_t nextBufferTime(int64_t *timeUs);
 
     void queueAccessUnit(const sp<ABuffer> &buffer);
+    void queueAccessUnit(MediaBuffer *buffer);
 
     void queueDiscontinuity(
             ATSParser::DiscontinuityType type, const sp<AMessage> &extra);
@@ -71,12 +87,12 @@ private:
     Mutex mLock;
     Condition mCondition;
 
-    bool mIsAudio;
     sp<MetaData> mFormat;
     int64_t mLastQueuedTimeUs;
     List<sp<ABuffer> > mBuffers;
     status_t mEOSResult;
     sp<AMessage> mLatestEnqueuedMeta;
+    Vector<MediaBuffer *> mMediaBuffers;
 
     bool wasFormatChange(int32_t discontinuityType) const;
 

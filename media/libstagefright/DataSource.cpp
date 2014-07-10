@@ -125,49 +125,30 @@ status_t DataSource::getSize(off64_t *size) {
 
 ////////////////////////////////////////////////////////////////////////////////
 
+Mutex DataSource::gSnifferMutex;
+List<DataSource::SnifferFunc> DataSource::gSniffers;
+bool DataSource::gSniffersRegistered = false;
+
 bool DataSource::sniff(
         String8 *mimeType, float *confidence, sp<AMessage> *meta) {
-
-    return  mSniffer->sniff(this, mimeType, confidence, meta);
-}
-
-// static
-void DataSource::RegisterSniffer_l(SnifferFunc func) {
-    return;
-}
-
-// static
-void DataSource::RegisterDefaultSniffers() {
-    return;
-}
-
-////////////////////////////////////////////////////////////////////////////////
-
-Sniffer::Sniffer() {
-    registerDefaultSniffers();
-}
-
-bool Sniffer::sniff(
-        DataSource *source,String8 *mimeType, float *confidence, sp<AMessage> *meta) {
-
-    bool forceExtraSniffers = false;
-
-    if (*confidence == 3.14f) {
-       // Magic value, as set by MediaExtractor when a video container looks incomplete
-       forceExtraSniffers = true;
-    }
 
     *mimeType = "";
     *confidence = 0.0f;
     meta->clear();
 
-    Mutex::Autolock autoLock(mSnifferMutex);
-    for (List<SnifferFunc>::iterator it = mSniffers.begin();
-         it != mSniffers.end(); ++it) {
+    {
+        Mutex::Autolock autoLock(gSnifferMutex);
+        if (!gSniffersRegistered) {
+            return false;
+        }
+    }
+
+    for (List<SnifferFunc>::iterator it = gSniffers.begin();
+         it != gSniffers.end(); ++it) {
         String8 newMimeType;
         float newConfidence;
         sp<AMessage> newMeta;
-        if ((*it)(source, &newMimeType, &newConfidence, &newMeta)) {
+        if ((*it)(this, &newMimeType, &newConfidence, &newMeta)) {
             if (newConfidence > *confidence) {
                 *mimeType = newMimeType;
                 *confidence = newConfidence;
@@ -176,82 +157,46 @@ bool Sniffer::sniff(
         }
     }
 
-    /* Only do the deeper sniffers if the results are null or in doubt */
-    if (mimeType->length() == 0 || *confidence < 0.2f || forceExtraSniffers) {
-        for (List<SnifferFunc>::iterator it = mExtraSniffers.begin();
-                it != mExtraSniffers.end(); ++it) {
-            String8 newMimeType;
-            float newConfidence;
-            sp<AMessage> newMeta;
-            if ((*it)(source, &newMimeType, &newConfidence, &newMeta)) {
-                if (newConfidence > *confidence) {
-                    *mimeType = newMimeType;
-                    *confidence = newConfidence;
-                    *meta = newMeta;
-                }
-            }
-        }
-    }
-
     return *confidence > 0.0;
 }
 
-void Sniffer::registerSniffer_l(SnifferFunc func) {
-
-    for (List<SnifferFunc>::iterator it = mSniffers.begin();
-         it != mSniffers.end(); ++it) {
+// static
+void DataSource::RegisterSniffer_l(SnifferFunc func) {
+    for (List<SnifferFunc>::iterator it = gSniffers.begin();
+         it != gSniffers.end(); ++it) {
         if (*it == func) {
             return;
         }
     }
 
-    mSniffers.push_back(func);
+    gSniffers.push_back(func);
 }
 
-void Sniffer::registerDefaultSniffers() {
-    Mutex::Autolock autoLock(mSnifferMutex);
+// static
+void DataSource::RegisterDefaultSniffers() {
+    Mutex::Autolock autoLock(gSnifferMutex);
+    if (gSniffersRegistered) {
+        return;
+    }
 
-    registerSniffer_l(SniffMPEG4);
-    registerSniffer_l(SniffMatroska);
-    registerSniffer_l(SniffOgg);
-    registerSniffer_l(SniffWAV);
-    registerSniffer_l(SniffFLAC);
-    registerSniffer_l(SniffAMR);
-    registerSniffer_l(SniffMPEG2TS);
-    registerSniffer_l(SniffMP3);
-    registerSniffer_l(SniffAAC);
-    registerSniffer_l(SniffMPEG2PS);
-    registerSniffer_l(SniffWVM);
-#ifdef ENABLE_AV_ENHANCEMENTS
-    registerSniffer_l(ExtendedExtractor::Sniff);
-#endif
-    registerSnifferPlugin();
+    RegisterSniffer_l(SniffMPEG4);
+    RegisterSniffer_l(SniffMatroska);
+    RegisterSniffer_l(SniffOgg);
+    RegisterSniffer_l(SniffWAV);
+    RegisterSniffer_l(SniffFLAC);
+    RegisterSniffer_l(SniffAMR);
+    RegisterSniffer_l(SniffMPEG2TS);
+    RegisterSniffer_l(SniffMP3);
+    RegisterSniffer_l(SniffAAC);
+    RegisterSniffer_l(SniffMPEG2PS);
+    RegisterSniffer_l(SniffWVM);
 
     char value[PROPERTY_VALUE_MAX];
     if (property_get("drm.service.enabled", value, NULL)
             && (!strcmp(value, "1") || !strcasecmp(value, "true"))) {
-        registerSniffer_l(SniffDRM);
+        RegisterSniffer_l(SniffDRM);
     }
-}
-
-void Sniffer::registerSnifferPlugin() {
-    static void (*getExtractorPlugin)(MediaExtractor::Plugin *) =
-            (void (*)(MediaExtractor::Plugin *))loadExtractorPlugin();
-
-    MediaExtractor::Plugin *plugin = MediaExtractor::getPlugin();
-    if (!plugin->sniff && getExtractorPlugin) {
-        getExtractorPlugin(plugin);
-    }
-    if (plugin->sniff) {
-        for (List<SnifferFunc>::iterator it = mExtraSniffers.begin();
-             it != mExtraSniffers.end(); ++it) {
-            if (*it == plugin->sniff) {
-                return;
-            }
-        }
-
-        mExtraSniffers.push_back(plugin->sniff);
-    }
+    gSniffersRegistered = true;
 }
 
 // static
