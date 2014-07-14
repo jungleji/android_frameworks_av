@@ -1219,20 +1219,20 @@ void LiveSession::onChangeConfiguration3(const sp<AMessage> &msg) {
                 if (!switching) {
                     sources[j]->clear();
                 } else {
-                    int32_t type, seq;
-                    int64_t srcTimeUs;
-                    sp<AMessage> meta = sources[j]->getLatestMeta();
+                    // int32_t type, seq;
+                    // int64_t srcTimeUs;
+                    // sp<AMessage> meta = sources[j]->getLatestMeta();
 
-                    if (meta != NULL && !meta->findInt32("discontinuity", &type)) {
-                        CHECK(meta->findInt32("seq", &seq));
-                        if (seq > latestSeq) {
-                            latestSeq = seq;
-                        }
-                        CHECK(meta->findInt64("timeUs", &srcTimeUs));
-                        if (srcTimeUs > latestTimeUs) {
-                            latestTimeUs = srcTimeUs;
-                        }
-                    }
+                    // if (meta != NULL && !meta->findInt32("discontinuity", &type)) {
+                    //     CHECK(meta->findInt32("seq", &seq));
+                    //     if (seq > latestSeq) {
+                    //         latestSeq = seq;
+                    //     }
+                    //     CHECK(meta->findInt64("timeUs", &srcTimeUs));
+                    //     if (srcTimeUs > latestTimeUs) {
+                    //         latestTimeUs = srcTimeUs;
+                    //     }
+                    // }
 
                     sources[j] = mPacketSources2.valueFor(indexToType(j));
                     sources[j]->clear();

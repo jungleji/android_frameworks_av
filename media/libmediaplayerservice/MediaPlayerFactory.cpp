@@ -168,7 +168,7 @@ player_type MediaPlayerFactory::getPlayerType(const sp<IMediaPlayer>& client,
     String8 filePath;
     getFileName(fd,&filePath);
     filePath.toLower();
-    ALOGE("getPlayerType(), fd = %d, path = %s",fd,filePath.string());
+    // ALOGD("getPlayerType(), fd = %d, path = %s",fd,filePath.string());
     if(strstr(filePath.string(),".apk"))
     {
         ALOGD("FILE:(%s) get STAGEFRIGHT_PLAYER",filePath.string());

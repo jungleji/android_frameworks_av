@@ -550,16 +550,16 @@ status_t PlaylistFetcher::onResumeUntil(const sp<AMessage> &msg) {
         }
 
         // Don't resume if we would stop within a resume threshold.
-        int64_t latestTimeUs = 0, stopTimeUs = 0;
-        sp<AMessage> latestMeta = packetSource->getLatestMeta();
-        if (latestMeta != NULL
-                && (latestMeta->findInt64("timeUs", &latestTimeUs)
-                && params->findInt64(stopKey, &stopTimeUs))) {
-            int64_t diffUs = stopTimeUs - latestTimeUs;
-            if (diffUs < resumeThreshold(latestMeta)) {
-                stop = true;
-            }
-        }
+        // int64_t latestTimeUs = 0, stopTimeUs = 0;
+        // sp<AMessage> latestMeta = packetSource->getLatestMeta();
+        // if (latestMeta != NULL
+        //         && (latestMeta->findInt64("timeUs", &latestTimeUs)
+        //         && params->findInt64(stopKey, &stopTimeUs))) {
+        //     int64_t diffUs = stopTimeUs - latestTimeUs;
+        //     if (diffUs < resumeThreshold(latestMeta)) {
+        //         stop = true;
+        //     }
+        // }
     }
 
     if (stop) {
