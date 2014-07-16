@@ -119,9 +119,9 @@ void ARTPConnection::MakePortPair(
 
     bumpSocketBufferSize(*rtcpSocket);
 
-    unsigned portRangeStart = 0;
-    unsigned portRangeEnd = 0;
-    ExtendedUtils::parseRtpPortRangeFromSystemProperty(&portRangeStart, &portRangeEnd);
+    unsigned portRangeStart = 15550;
+    unsigned portRangeEnd = 65535;
+    // ExtendedUtils::parseRtpPortRangeFromSystemProperty(&portRangeStart, &portRangeEnd);
 
     // choose a random start port from range of [portRangeStart, portRangeEnd)
     unsigned start = (unsigned)((long long)rand() * (portRangeEnd - portRangeStart)

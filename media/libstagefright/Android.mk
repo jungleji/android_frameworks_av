@@ -227,10 +227,10 @@ ifdef DOLBY_UDC_MULTICHANNEL
   LOCAL_CFLAGS += -DDOLBY_UDC_MULTICHANNEL
 endif #DOLBY_UDC_MULTICHANNEL
 
-# LOCAL_MODULE:= libstagefright
+LOCAL_MODULE:= libstagefright
 
-# LOCAL_MODULE_TAGS := optional
+LOCAL_MODULE_TAGS := optional
 
-# include $(BUILD_SHARED_LIBRARY)
+include $(BUILD_SHARED_LIBRARY)
 
 include $(call all-makefiles-under,$(LOCAL_PATH))
