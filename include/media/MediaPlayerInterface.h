@@ -114,7 +114,6 @@ public:
         virtual status_t    getFramesWritten(uint32_t *frameswritten) const = 0;
         virtual int         getSessionId() const = 0;
         virtual audio_stream_type_t getAudioStreamType() const = 0;
-        virtual uint32_t    getSampleRate() const = 0;
 
         // If no callback is specified, use the "write" API below to submit
         // audio data.
@@ -138,6 +137,7 @@ public:
         virtual bool        needsTrailingPadding() { return true; }
         virtual status_t    setParameters(const String8& keyValuePairs) { return NO_ERROR; };
         virtual String8     getParameters(const String8& keys) { return String8::empty(); };
+        virtual uint32_t    getSampleRate() const = 0;
 
 #ifdef QCOM_DIRECTTRACK
         virtual ssize_t     sampleRate() const {return 0;};

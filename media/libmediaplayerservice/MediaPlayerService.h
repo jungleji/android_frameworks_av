@@ -92,7 +92,6 @@ class MediaPlayerService : public BnMediaPlayerService
         virtual status_t        getPosition(uint32_t *position) const;
         virtual status_t        getFramesWritten(uint32_t *frameswritten) const;
         virtual int             getSessionId() const;
-        virtual uint32_t        getSampleRate() const;
 
         virtual status_t        open(
                 uint32_t sampleRate, int channelCount, audio_channel_mask_t channelMask,
@@ -125,6 +124,7 @@ class MediaPlayerService : public BnMediaPlayerService
 
         virtual status_t        setParameters(const String8& keyValuePairs);
         virtual String8         getParameters(const String8& keys);
+        virtual uint32_t        getSampleRate() const;
 
 #ifdef QCOM_DIRECTTRACK
         virtual ssize_t         sampleRate() const;
@@ -208,7 +208,6 @@ class MediaPlayerService : public BnMediaPlayerService
         virtual status_t        getPosition(uint32_t *position) const;
         virtual status_t        getFramesWritten(uint32_t *frameswritten) const;
         virtual int             getSessionId() const;
-        virtual uint32_t        getSampleRate() const;
 
         virtual status_t        open(
                 uint32_t sampleRate, int channelCount, audio_channel_mask_t channelMask,
@@ -243,6 +242,7 @@ class MediaPlayerService : public BnMediaPlayerService
         static  void            notify(void* cookie, int msg,
                                        int ext1, int ext2, const Parcel *obj);
         virtual status_t        dump(int fd, const Vector<String16>& args) const;
+        virtual uint32_t        getSampleRate() const;
 
     private:
                                 AudioCache();
